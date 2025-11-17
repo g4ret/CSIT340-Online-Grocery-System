@@ -5,11 +5,17 @@ const navLinks = [
   { id: 'about', label: 'About' },
 ]
 
-function SiteHeader({ activePage, onNavigate }) {
+function SiteHeader({ activePage, onNavigate, onLogout }) {
   const handleNavClick = (event, linkId) => {
     event.preventDefault()
     if (onNavigate) {
       onNavigate(linkId)
+    }
+  }
+
+  const handleLogout = () => {
+    if (onLogout) {
+      onLogout()
     }
   }
 
@@ -65,6 +71,15 @@ function SiteHeader({ activePage, onNavigate }) {
             onClick={() => onNavigate && onNavigate('profile')}
           >
             👤
+          </button>
+          <button
+            type="button"
+            aria-label="logout"
+            className="logout-btn"
+            onClick={handleLogout}
+            title="Logout"
+          >
+            🚪
           </button>
         </div>
       </div>

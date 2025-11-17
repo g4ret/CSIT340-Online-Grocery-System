@@ -19,17 +19,6 @@ function ProfilePage() {
   return (
     <main className="customer-module profile-page">
       <section className="home-section">
-        <div className="section-top">
-          <div>
-            <p className="section-eyebrow">Account center</p>
-            <h2>Profile & personalization</h2>
-            <p>
-              Manage your delivery details, preferred payment methods, and communication preferences
-              in one place.
-            </p>
-          </div>
-        </div>
-
         <div className="profile-grid">
           <article className="profile-card">
             <h3>Account info</h3>
