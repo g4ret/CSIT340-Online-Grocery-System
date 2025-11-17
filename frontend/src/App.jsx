@@ -29,12 +29,19 @@ function App() {
     }
   }
 
+  const pageProps =
+    activePage === 'addToCart'
+      ? {
+          onCheckout: () => handleNavigate('checkout'),
+        }
+      : {}
+
   return (
     <div className="app-shell">
       <SiteHeader activePage={activePage} onNavigate={handleNavigate} />
       <div className="page-container">
         <div className="page-transition" key={activePage}>
-          <ActivePage />
+          <ActivePage {...pageProps} />
         </div>
       </div>
       <SiteFooter />

@@ -1,96 +1,94 @@
+import products from '../data/products'
+
 const orderedProducts = [
-  { name: 'Local Oranges', price: 35, qty: 2 },
-  { name: 'Corned Beef', price: 95, qty: 1 },
-  { name: 'Cheddar Cheese', price: 120, qty: 1 },
+  { productId: 1, qty: 3 },
+  { productId: 3, qty: 3 },
+  { productId: 4, qty: 1 },
+  { productId: 2, qty: 3 },
 ]
 
-const subtotal = orderedProducts.reduce((sum, item) => sum + item.price * item.qty, 0)
+const subtotal = orderedProducts.reduce((sum, item) => {
+  const product = products.find((p) => p.id === item.productId)
+  return sum + (product?.price || 0) * item.qty
+}, 0)
 
 function CheckoutPage() {
   return (
-    <main className="customer-module">
-      <header className="hero">
-        <p className="eyebrow">Checkout</p>
-        <h1>Review and complete your order</h1>
-        <p className="intro">
-          The checkout wizard captures delivery addresses, payment preferences, and shows a final
-          review before placing the order.
-        </p>
-      </header>
-
-      <section className="checkout-layout">
-        <form className="checkout-card">
-          <h3>Delivery address</h3>
-          <label>
-            Full name
-            <input defaultValue="Rica Blanca" />
-          </label>
-          <label>
-            Street / apartment
-            <input defaultValue="12A Mango St., West Fairview" />
-          </label>
-          <div className="form-grid">
-            <label>
-              City
-              <input defaultValue="Quezon City" />
-            </label>
-            <label>
-              Postal code
-              <input defaultValue="1127" />
-            </label>
-          </div>
-          <label>
-            Phone
-            <input defaultValue="+63 917 000 0000" />
-          </label>
-          <label>
-            Delivery instructions
-            <textarea placeholder="e.g. Leave with the guard, call upon arrival" />
-          </label>
-
-          <h3>Payment</h3>
-          <div className="radio-list">
-            <label>
-              <input type="radio" name="payment" defaultChecked /> Gcash ending in 1298
-            </label>
-            <label>
-              <input type="radio" name="payment" /> Credit card ending in 4401
-            </label>
-            <label>
-              <input type="radio" name="payment" /> Cash on Delivery
-            </label>
-          </div>
-        </form>
-
-        <aside className="checkout-summary">
-          <h3>Products ordered</h3>
-          <ul>
-            {orderedProducts.map((item) => (
-              <li key={item.name}>
-                <div>
-                  <strong>{item.name}</strong>
-                  <small>{item.qty} item{item.qty > 1 ? 's' : ''}</small>
-                </div>
-                <span>₱{item.price * item.qty}</span>
-              </li>
-            ))}
-          </ul>
-          <div>
-            <span>Subtotal</span>
-            <strong>₱{subtotal}</strong>
-          </div>
-          <div>
-            <span>Delivery</span>
-            <strong>₱50</strong>
-          </div>
-          <div className="checkout-summary__total">
-            <span>Total</span>
-            <strong>₱{subtotal + 50}</strong>
-          </div>
-          <button type="button" className="primary-btn">
-            Place order
+    <main className="customer-module checkout-page">
+      <section className="checkout-section">
+        <div className="checkout-card full">
+          <p className="section-eyebrow">Delivery address</p>
+          <h2>Claudine Margaret Ricablanca (+63) 994 082 4135</h2>
+          <p>626 Cebu South Rd., Pardo (Pob.), Cebu City, Visayas, Cebu 6000</p>
+          <button type="button" className="link-btn subtle">
+            Change
           </button>
-        </aside>
+        </div>
+
+        <div className="products-card">
+          <h3>Products Ordered</h3>
+          <article className="merchant-block">
+            <div className="merchant-title">
+              Insta Threads PH <button className="link-btn subtle">Chat now</button>
+            </div>
+            {orderedProducts.map((item) => {
+              const product = products.find((p) => p.id === item.productId)
+              return (
+                <div className="checkout-row" key={product.id}>
+                  <div className="product-cell">
+                    <img src={product.image} alt={product.name} />
+                    <div>
+                      <p>{product.name}</p>
+                      <small>Variation: {product.badge} • Qty {item.qty}</small>
+                    </div>
+                  </div>
+                  <div>₱{product.price}</div>
+                  <div>{item.qty}</div>
+                  <div>₱{product.price * item.qty}</div>
+                </div>
+              )
+            })}
+          </article>
+        </div>
+
+        <div className="checkout-card">
+          <h3>Shop voucher</h3>
+          <button type="button" className="link-btn subtle">
+            Select Voucher
+          </button>
+        </div>
+
+        <div className="checkout-card">
+          <h3>Shopee Coins</h3>
+          <small>Coins cannot be redeemed</small>
+        </div>
+
+        <div className="payment-summary">
+          <div>
+            <h3>Payment Method</h3>
+            <p>Cash on Delivery</p>
+            <button type="button" className="link-btn subtle">
+              Change
+            </button>
+          </div>
+          <div className="totals">
+            <div>
+              <span>Merchandise Subtotal</span>
+              <strong>₱{subtotal}</strong>
+            </div>
+            <div>
+              <span>Shipping Subtotal</span>
+              <strong>₱175</strong>
+            </div>
+            <div className="checkout-summary__total">
+              <span>Total Payment</span>
+              <strong>₱{subtotal + 175}</strong>
+            </div>
+          </div>
+          <button type="button" className="checkout-btn wide">
+            Place Order
+          </button>
+        </div>
       </section>
     </main>
   )
