@@ -52,7 +52,12 @@ function SiteHeader({ activePage, onNavigate }) {
         <button type="button" aria-label="cart">
           🛒
         </button>
-        <button type="button" aria-label="profile">
+        <button
+          type="button"
+          aria-label="profile"
+          className={activePage === 'profile' ? 'profile-active' : undefined}
+          onClick={() => onNavigate && onNavigate('profile')}
+        >
           👤
         </button>
       </div>

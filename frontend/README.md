@@ -1,16 +1,53 @@
-# React + Vite
+# Online Grocery System – Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Modern React + Vite interface for the Online Grocery System. It showcases the entire customer journey—from browsing, product exploration, cart, checkout, and order tracking—styled with a pastel-inspired UI and responsive layouts.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- [Vite](https://vitejs.dev/) + React 18
+- CSS Modules / global CSS for styling
+- ESLint for linting (default Vite config)
 
-## React Compiler
+## Getting Started
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-## Expanding the ESLint configuration
+Visit `http://localhost:5173` to see the app.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Available Pages
+
+- Homepage with hero, best selling, explore products, and categories sections
+- Category view with filterable product listing
+- Product details highlight
+- Add to cart summary and totals
+- Checkout form and order review
+- Orders & tracking dashboard
+
+## Project Structure
+
+```
+frontend/
+├─ src/
+│  ├─ components/          # Shared header/footer, etc.
+│  ├─ pages/               # Page-level views
+│  ├─ data/                # Mock product data
+│  ├─ App.jsx / App.css    # Root React component & global styles
+│  └─ main.jsx             # Vite entry
+└─ public/                 # Static assets
+```
+
+## Scripts
+
+- `npm run dev` – start dev server
+- `npm run build` – production build
+- `npm run preview` – preview production build
+
+## Notes
+
+- The design is UI-focused to match the provided mockups; connect to the backend API when ready.
+- Header navigation updates the React state to swap page views with a small transition.
+- Product data currently lives in `src/data/products.js` for demo purposes.

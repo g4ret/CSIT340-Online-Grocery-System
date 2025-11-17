@@ -6,6 +6,7 @@ import ProductDetailsPage from './pages/ProductDetailsPage'
 import AddToCartPage from './pages/AddToCartPage'
 import CheckoutPage from './pages/CheckoutPage'
 import OrdersPage from './pages/OrdersPage'
+import ProfilePage from './pages/ProfilePage'
 import SiteHeader from './components/SiteHeader'
 import SiteFooter from './components/SiteFooter'
 
@@ -16,6 +17,7 @@ const pages = {
   addToCart: { label: 'Add to Cart', component: AddToCartPage },
   checkout: { label: 'Checkout', component: CheckoutPage },
   orders: { label: 'Orders & Tracking', component: OrdersPage },
+  profile: { label: 'Profile', component: ProfilePage },
 }
 
 function App() {
