@@ -56,10 +56,6 @@ function HomePage({ onNavigate }) {
 
   return (
     <main className="home-screen">
-      <div className="promo-banner">
-        <p>20% cashback for all users | Code: OGOFERS13</p>
-      </div>
-
       <section className="hero-banner-groci">
         <div className="hero-left">
           <h1>

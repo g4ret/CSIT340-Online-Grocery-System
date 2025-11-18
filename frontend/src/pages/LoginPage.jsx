@@ -83,6 +83,14 @@ function LoginPage({ onNavigate, onLogin }) {
             </p>
             <p>Email: demo@example.com</p>
             <p>Password: demo123</p>
+            <div className="admin-credentials">
+              <p>
+                <strong>Admin Access:</strong>
+              </p>
+              <p>Email: admin@lazshoppe.com</p>
+              <p>Password: admin123</p>
+              <small>Dashboard is restricted to authorized staff members.</small>
+            </div>
           </div>
 
           <div className="form-options">

@@ -1,6 +1,6 @@
-# Online Grocery System – Frontend
+# LazShoppe – Frontend
 
-Modern React + Vite interface for the Online Grocery System. It showcases the entire customer journey—from browsing, product exploration, cart, checkout, and order tracking—styled with a pastel-inspired UI and responsive layouts.
+Modern React + Vite interface for LazShoppe. It showcases the entire customer journey—from browsing, product exploration, cart, checkout, and order tracking—styled with a pastel-inspired UI and responsive layouts.
 
 ## Tech Stack
 

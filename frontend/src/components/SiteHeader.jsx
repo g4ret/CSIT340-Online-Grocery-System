@@ -1,11 +1,18 @@
-const navLinks = [
+const customerNavLinks = [
   { id: 'category', label: 'Category' },
   { id: 'home', label: 'Home' },
   { id: 'contact', label: 'Contact' },
   { id: 'about', label: 'About' },
 ]
 
-function SiteHeader({ activePage, onNavigate, onLogout }) {
+const adminNavLinks = [
+  { id: 'adminDashboard', label: 'Dashboard' },
+  { id: 'adminProducts', label: 'Products' },
+  { id: 'orders', label: 'Orders' },
+  { id: 'category', label: 'Catalog' },
+]
+
+function SiteHeader({ activePage, onNavigate, onLogout, userRole }) {
   const handleNavClick = (event, linkId) => {
     event.preventDefault()
     if (onNavigate) {
@@ -45,13 +52,13 @@ function SiteHeader({ activePage, onNavigate, onLogout }) {
             </svg>
           </div>
           <div className="brand-text">
-            <strong>Online Grocery System</strong>
+            <strong>LazShoppe</strong>
             <small>Fresh finds daily</small>
           </div>
         </div>
 
         <nav className="site-nav">
-          {navLinks.map((link) => (
+          {(userRole === 'admin' ? adminNavLinks : customerNavLinks).map((link) => (
             <a
               key={link.id}
               href="#"
@@ -64,32 +71,7 @@ function SiteHeader({ activePage, onNavigate, onLogout }) {
         </nav>
 
         <div className="toolbar-actions">
-          <div className="toolbar-search">
-            <input placeholder="What are you looking for?" />
-            <button type="button">🔍</button>
-          </div>
-          <button type="button" aria-label="wishlist">
-            ♡
-          </button>
-          <button type="button" aria-label="notifications">
-            🔔
-          </button>
-          <button
-            type="button"
-            aria-label="cart"
-            className={activePage === 'addToCart' ? 'cart-active' : undefined}
-            onClick={() => onNavigate && onNavigate('addToCart')}
-          >
-            🛒
-          </button>
-          <button
-            type="button"
-            aria-label="profile"
-            className={activePage === 'profile' ? 'profile-active' : undefined}
-            onClick={() => onNavigate && onNavigate('profile')}
-          >
-            👤
-          </button>
+          {userRole && <span className={`role-pill ${userRole}`}>{userRole}</span>}
           <button
             type="button"
             aria-label="logout"
