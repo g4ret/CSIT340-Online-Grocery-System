@@ -9,6 +9,8 @@ import OrdersPage from './pages/OrdersPage'
 import ProfilePage from './pages/ProfilePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import ContactPage from './pages/ContactPage'
+import AboutPage from './pages/AboutPage'
 import SiteHeader from './components/SiteHeader'
 import SiteFooter from './components/SiteFooter'
 
@@ -22,6 +24,8 @@ const pages = {
   profile: { label: 'Profile', component: ProfilePage },
   login: { label: 'Login', component: LoginPage },
   register: { label: 'Register', component: RegisterPage },
+  contact: { label: 'Contact', component: ContactPage },
+  about: { label: 'About', component: AboutPage },
 }
 
 // Temporary login credentials (remove when backend is ready)
@@ -81,22 +85,25 @@ function App() {
 
   const ActivePage = pages[activePage].component
 
+  const sharedProps = { onNavigate: handleNavigate }
+
   const pageProps =
     activePage === 'addToCart'
       ? {
+          ...sharedProps,
           onCheckout: () => handleNavigate('checkout'),
         }
       : activePage === 'login'
         ? {
-            onNavigate: handleNavigate,
+            ...sharedProps,
             onLogin: handleLogin,
           }
         : activePage === 'register'
           ? {
-              onNavigate: handleNavigate,
+              ...sharedProps,
               onRegister: handleRegister,
             }
-          : {}
+          : sharedProps
 
   return (
     <div className="app-shell">

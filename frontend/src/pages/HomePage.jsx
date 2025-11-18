@@ -34,7 +34,20 @@ const calculateDiscount = (originalPrice, currentPrice) => {
   return Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
 }
 
-function HomePage() {
+function HomePage({ onNavigate }) {
+  const goToProductDetails = () => {
+    if (onNavigate) {
+      onNavigate('product')
+    }
+  }
+
+  const handleKeyNavigate = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault()
+      goToProductDetails()
+    }
+  }
+
   const topSavers = products.slice(0, 8).map((product) => {
     const originalPrice = product.price + Math.floor(product.price * 0.2)
     const discount = calculateDiscount(originalPrice, product.price)
@@ -83,8 +96,16 @@ function HomePage() {
             <article className="home-product-card" key={product.id}>
               <span className="discount-pill">{product.discount}%</span>
               <div className="product-organic-badge">●</div>
-              <img src={product.image} alt={product.name} loading="lazy" />
-              <h3>{product.name}</h3>
+              <img
+                src={product.image}
+                alt={product.name}
+                loading="lazy"
+                onClick={goToProductDetails}
+                className="product-thumb"
+              />
+              <h3 onClick={goToProductDetails} role="link" tabIndex={0} onKeyDown={handleKeyNavigate}>
+                {product.name}
+              </h3>
               <div className="stock-status">
                 <span className="checkmark">✓</span> In Stock - 1 {product.unit}
               </div>
@@ -97,6 +118,9 @@ function HomePage() {
                 <span>1</span>
                 <button type="button">+</button>
               </div>
+              <button type="button" className="view-details-btn" onClick={goToProductDetails}>
+                View Details
+              </button>
               <button type="button" className="add-cart-btn">
                 🛒 Add to cart
               </button>
@@ -120,8 +144,16 @@ function HomePage() {
             <article className="home-product-card" key={product.id}>
               <span className="discount-pill">{product.discount}%</span>
               <div className="product-organic-badge">●</div>
-              <img src={product.image} alt={product.name} loading="lazy" />
-              <h3>{product.name}</h3>
+              <img
+                src={product.image}
+                alt={product.name}
+                loading="lazy"
+                onClick={goToProductDetails}
+                className="product-thumb"
+              />
+              <h3 onClick={goToProductDetails} role="link" tabIndex={0} onKeyDown={handleKeyNavigate}>
+                {product.name}
+              </h3>
               <div className="stock-status">
                 <span className="checkmark">✓</span> In Stock - 1 {product.unit}
               </div>
@@ -134,6 +166,9 @@ function HomePage() {
                 <span>1</span>
                 <button type="button">+</button>
               </div>
+              <button type="button" className="view-details-btn" onClick={goToProductDetails}>
+                View Details
+              </button>
               <button type="button" className="add-cart-btn">
                 🛒 Add to cart
               </button>
