@@ -412,6 +412,19 @@
   gap: 2rem;
 }
 
+.admin-page-header {
+  border-bottom: 1px solid #e5e5e5;
+  padding-bottom: 1rem;
+  margin-bottom: 0;
+}
+
+.admin-page-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
 .admin-board__summary {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -533,13 +546,16 @@
   color: #374151;
 }
 
-.admin-products {
+.admin-products,
+.admin-orders,
+.admin-users {
   width: 100%;
   background: #7f7f7f;
   padding: 2rem 0;
 }
 
-.admin-products__shell {
+.admin-products__shell,
+.admin-orders__shell {
   max-width: 1150px;
   margin: 0 auto;
   background: #fff;
@@ -619,32 +635,47 @@
   border-color: #ef4444;
 }
 
-.admin-products__table {
+.admin-products__table,
+.admin-orders__table,
+.admin-users__table {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
 }
 
 .admin-products__table header,
-.admin-products__table article {
+.admin-products__table article,
+.admin-orders__table header,
+.admin-orders__table article,
+.admin-users__table header,
+.admin-users__table article {
   display: grid;
   grid-template-columns: 2.4fr 1fr 1fr 1fr 1fr 1fr;
   gap: 0.75rem;
   align-items: center;
 }
 
-.admin-products__table header {
+.admin-products__table header,
+.admin-orders__table header,
+.admin-users__table header {
   font-weight: 700;
   color: #475569;
   border-bottom: 1px solid #e2e8f0;
   padding-bottom: 0.4rem;
 }
 
-.admin-products__table article {
+.admin-products__table article,
+.admin-orders__table article,
+.admin-users__table article {
   border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 0.9rem 1rem;
   background: #fff;
+}
+
+.admin-users__table header,
+.admin-users__table article {
+  grid-template-columns: 0.6fr 1.5fr 2.3fr 1fr 1.4fr;
 }
 
 .product-meta {
@@ -714,13 +745,45 @@
   color: #fff;
 }
 
+.status-badge {
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.status-badge.pending {
+  background: #fef9c3;
+  color: #a16207;
+}
+
+.status-badge.packed {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.status-badge.out-for-delivery {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.status-badge.delivered {
+  background: #dcfce7;
+  color: #15803d;
+}
+
 @media (max-width: 900px) {
   .control-row {
     grid-template-columns: 1fr;
   }
 
   .admin-products__table header,
-  .admin-products__table article {
+  .admin-products__table article,
+  .admin-orders__table header,
+  .admin-orders__table article,
+  .admin-users__table header,
+  .admin-users__table article {
     grid-template-columns: repeat(2, 1fr);
   }
 }

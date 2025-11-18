@@ -3,7 +3,7 @@ import products from '../data/products'
 
 const filterOptions = ['All Categories', ...new Set(products.map((item) => item.category))]
 
-function AdminProductsPage({ onNavigate, onLogout }) {
+function AdminProductsPage({ onNavigate }) {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All Categories')
 
@@ -22,19 +22,9 @@ function AdminProductsPage({ onNavigate, onLogout }) {
   return (
     <main className="admin-products">
       <div className="admin-products__shell">
-        <header className="admin-products__header">
-          <div className="admin-products__brand">
-            <div className="brand-mark">🛒</div>
-            <div>
-              <p>Online Grocery</p>
-              <h1>Products</h1>
-            </div>
-          </div>
-          <button type="button" className="logout-pill" onClick={onLogout}>
-            Logout
-          </button>
+        <header className="admin-page-header">
+          <h1>Products</h1>
         </header>
-
         <section className="admin-products__controls">
           <div>
             <h2>All Products {filteredProducts.length.toLocaleString()}</h2>

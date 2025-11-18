@@ -45,6 +45,9 @@ function AdminDashboardPage({ onNavigate }) {
   return (
     <main className="admin-dashboard-simple">
       <div className="admin-board">
+        <header className="admin-page-header">
+          <h1>Dashboard</h1>
+        </header>
         <section className="admin-board__summary">
           {summaryCards.map((card) => (
             <article key={card.label} className="summary-card">
