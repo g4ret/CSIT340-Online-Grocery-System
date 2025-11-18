@@ -33,7 +33,7 @@ function SiteFooter() {
             </svg>
           </div>
           <div>
-            <strong>Online Grocery System</strong>
+            <strong>LazShoppe</strong>
             <p>Trusted groceries delivered fast.</p>
           </div>
         </div>
@@ -46,7 +46,7 @@ function SiteFooter() {
           ))}
         </ul>
 
-        <p className="footer-copy">© {new Date().getFullYear()} Online Grocery System. All rights reserved.</p>
+        <p className="footer-copy">© {new Date().getFullYear()} LazShoppe. All rights reserved.</p>
       </div>
     </footer>
   )

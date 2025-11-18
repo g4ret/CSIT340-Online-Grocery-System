@@ -31,7 +31,7 @@ function AboutPage() {
     <main className="about-page">
       <div className="about-shell">
         <section className="about-hero">
-          <p>About Online Grocery</p>
+          <p>About LazShoppe</p>
           <h1>Delivering market-fresh groceries to Filipino homes since 2017.</h1>
           <span>
             We partner with growers, fisherfolk, and social enterprises to bring mindful choices to your daily table.
@@ -55,7 +55,7 @@ function AboutPage() {
               to thousands of households every day.
             </p>
             <p>
-              Today, Online Grocery is a hybrid marketplace and dark-store operator combining personal shoppers, climate
+            Today, LazShoppe is a hybrid marketplace and dark-store operator combining personal shoppers, climate
               controlled hubs, and a rider fleet optimized for quick but careful deliveries.
             </p>
           </div>

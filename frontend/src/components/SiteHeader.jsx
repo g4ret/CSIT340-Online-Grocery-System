@@ -45,7 +45,7 @@ function SiteHeader({ activePage, onNavigate, onLogout }) {
             </svg>
           </div>
           <div className="brand-text">
-            <strong>Online Grocery System</strong>
+            <strong>LazShoppe</strong>
             <small>Fresh finds daily</small>
           </div>
         </div>
