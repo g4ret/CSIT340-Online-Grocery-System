@@ -13,6 +13,8 @@ import ContactPage from './pages/ContactPage'
 import AboutPage from './pages/AboutPage'
 import SiteHeader from './components/SiteHeader'
 import SiteFooter from './components/SiteFooter'
+import AdminDashboardPage from './pages/AdminDashboardPage'
+import AdminProductsPage from './pages/AdminProductsPage'
 
 const pages = {
   category: { label: 'Category', component: CategoryPage },
@@ -26,6 +28,8 @@ const pages = {
   register: { label: 'Register', component: RegisterPage },
   contact: { label: 'Contact', component: ContactPage },
   about: { label: 'About', component: AboutPage },
+  adminDashboard: { label: 'Admin Dashboard', component: AdminDashboardPage },
+  adminProducts: { label: 'Admin Products', component: AdminProductsPage },
 }
 
 // Temporary login credentials (remove when backend is ready)
@@ -34,27 +38,49 @@ const TEMP_CREDENTIALS = {
   password: 'demo123',
 }
 
+const ADMIN_CREDENTIALS = {
+  email: 'admin@lazshoppe.com',
+  password: 'admin123',
+}
+
 function App() {
   const [activePage, setActivePage] = useState('login')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [userRole, setUserRole] = useState(null)
 
   // Check if user is already logged in (from localStorage)
   useEffect(() => {
     const authStatus = localStorage.getItem('isAuthenticated')
-    if (authStatus === 'true') {
+    const savedRole = localStorage.getItem('userRole')
+    if (authStatus === 'true' && savedRole) {
       setIsAuthenticated(true)
-      setActivePage('home')
+      setUserRole(savedRole)
+      setActivePage(savedRole === 'admin' ? 'adminDashboard' : 'home')
     }
   }, [])
 
+  const persistSession = (role, email, destination) => {
+    setIsAuthenticated(true)
+    setUserRole(role)
+    localStorage.setItem('isAuthenticated', 'true')
+    localStorage.setItem('userRole', role)
+    localStorage.setItem('userEmail', email)
+    setActivePage(destination)
+    return { success: true }
+  }
+
   const handleLogin = (email, password) => {
     // Temporary login check (replace with backend API call)
+    const isAdmin =
+      email.trim().toLowerCase() === ADMIN_CREDENTIALS.email &&
+      password === ADMIN_CREDENTIALS.password
+
+    if (isAdmin) {
+      return persistSession('admin', ADMIN_CREDENTIALS.email, 'adminDashboard')
+    }
+
     if (email === TEMP_CREDENTIALS.email && password === TEMP_CREDENTIALS.password) {
-      setIsAuthenticated(true)
-      localStorage.setItem('isAuthenticated', 'true')
-      localStorage.setItem('userEmail', email)
-      setActivePage('home')
-      return { success: true }
+      return persistSession('customer', email, 'home')
     } else {
       return { success: false, message: 'Invalid email or password' }
     }
@@ -62,22 +88,23 @@ function App() {
 
   const handleLogout = () => {
     setIsAuthenticated(false)
+    setUserRole(null)
     localStorage.removeItem('isAuthenticated')
     localStorage.removeItem('userEmail')
+    localStorage.removeItem('userRole')
     setActivePage('login')
   }
 
   const handleRegister = (userData) => {
     // Temporary registration (just store in localStorage for demo)
     // In real app, this would call backend API
-    localStorage.setItem('isAuthenticated', 'true')
-    localStorage.setItem('userEmail', userData.email)
-    setIsAuthenticated(true)
-    setActivePage('home')
-    return { success: true }
+    return persistSession('customer', userData.email, 'home')
   }
 
   const handleNavigate = (target) => {
+    if (target === 'adminDashboard' && userRole !== 'admin') {
+      return
+    }
     if (pages[target]) {
       setActivePage(target)
     }
@@ -85,7 +112,7 @@ function App() {
 
   const ActivePage = pages[activePage].component
 
-  const sharedProps = { onNavigate: handleNavigate }
+  const sharedProps = { onNavigate: handleNavigate, userRole, onLogout: handleLogout }
 
   const pageProps =
     activePage === 'addToCart'
@@ -108,7 +135,12 @@ function App() {
   return (
     <div className="app-shell">
       {isAuthenticated && (
-        <SiteHeader activePage={activePage} onNavigate={handleNavigate} onLogout={handleLogout} />
+        <SiteHeader
+          activePage={activePage}
+          onNavigate={handleNavigate}
+          onLogout={handleLogout}
+          userRole={userRole}
+        />
       )}
       <div className="page-container">
         <div className="page-transition" key={activePage}>
