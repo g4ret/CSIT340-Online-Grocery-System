@@ -15,6 +15,8 @@ import SiteHeader from './components/SiteHeader'
 import SiteFooter from './components/SiteFooter'
 import AdminDashboardPage from './pages/AdminDashboardPage'
 import AdminProductsPage from './pages/AdminProductsPage'
+import AdminOrdersPage from './pages/AdminOrdersPage'
+import AdminUsersPage from './pages/AdminUsersPage'
 
 const pages = {
   category: { label: 'Category', component: CategoryPage },
@@ -30,6 +32,8 @@ const pages = {
   about: { label: 'About', component: AboutPage },
   adminDashboard: { label: 'Admin Dashboard', component: AdminDashboardPage },
   adminProducts: { label: 'Admin Products', component: AdminProductsPage },
+  adminOrders: { label: 'Admin Orders', component: AdminOrdersPage },
+  adminUsers: { label: 'Admin Users', component: AdminUsersPage },
 }
 
 // Temporary login credentials (remove when backend is ready)
@@ -112,7 +116,12 @@ function App() {
 
   const ActivePage = pages[activePage].component
 
-  const sharedProps = { onNavigate: handleNavigate, userRole, onLogout: handleLogout }
+  const sharedProps = {
+    onNavigate: handleNavigate,
+    userRole,
+    onLogout: handleLogout,
+    activePage,
+  }
 
   const pageProps =
     activePage === 'addToCart'

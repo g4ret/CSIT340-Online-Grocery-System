@@ -8,7 +8,8 @@ const customerNavLinks = [
 const adminNavLinks = [
   { id: 'adminDashboard', label: 'Dashboard' },
   { id: 'adminProducts', label: 'Products' },
-  { id: 'orders', label: 'Orders' },
+  { id: 'adminOrders', label: 'Orders' },
+  { id: 'adminUsers', label: 'Users' },
   { id: 'category', label: 'Catalog' },
 ]
 
