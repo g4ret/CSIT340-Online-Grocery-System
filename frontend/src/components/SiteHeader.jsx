@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 const customerNavLinks = [
   { id: 'category', label: 'Category' },
   { id: 'home', label: 'Home' },
@@ -15,6 +17,8 @@ const adminNavLinks = [
 ]
 
 function SiteHeader({ activePage, onNavigate, onLogout, userRole, cartCount }) {
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+
   const handleNavClick = (event, linkId) => {
     event.preventDefault()
     if (onNavigate) {
@@ -26,6 +30,18 @@ function SiteHeader({ activePage, onNavigate, onLogout, userRole, cartCount }) {
     if (onLogout) {
       onLogout()
     }
+  }
+
+  const handleProfileClick = () => {
+    if (onNavigate) {
+      onNavigate('profile')
+    }
+    setIsUserMenuOpen(false)
+  }
+
+  const handleUserMenuLogout = () => {
+    setIsUserMenuOpen(false)
+    handleLogout()
   }
 
   return (
@@ -83,15 +99,27 @@ function SiteHeader({ activePage, onNavigate, onLogout, userRole, cartCount }) {
               🛒 {cartCount ?? 0}
             </button>
           )}
-          <button
-            type="button"
-            aria-label="logout"
-            className="logout-btn"
-            onClick={handleLogout}
-            title="Logout"
-          >
-            🚪
-          </button>
+          <div className="user-menu">
+            <button
+              type="button"
+              className="user-menu__button"
+              onClick={() => setIsUserMenuOpen((open) => !open)}
+              aria-haspopup="true"
+              aria-expanded={isUserMenuOpen}
+            >
+              <img src="/image.png" alt="Account" className="user-menu__avatar" />
+            </button>
+            {isUserMenuOpen && (
+              <div className="user-menu__dropdown">
+                <button type="button" onClick={handleProfileClick}>
+                  Profile
+                </button>
+                <button type="button" onClick={handleUserMenuLogout}>
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>

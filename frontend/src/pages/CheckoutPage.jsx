@@ -1,6 +1,56 @@
+import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
 function CheckoutPage({ showToast, onNavigate, onOrderPlaced, checkoutItems = [] }) {
+  const [profileAddress, setProfileAddress] = useState(null)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false)
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      setIsLoadingProfile(true)
+
+      try {
+        const { data: userResult, error: userError } = await supabase.auth.getUser()
+
+        if (userError || !userResult?.user) {
+          setIsLoadingProfile(false)
+          return
+        }
+
+        const user = userResult.user
+
+        const { data: profileRow, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (profileError) {
+          console.error('Error loading profile for checkout', profileError)
+        }
+
+        if (profileRow) {
+          setProfileAddress({
+            name: profileRow.full_name || user.user_metadata?.full_name || user.email,
+            phone: profileRow.phone || user.user_metadata?.phone || '',
+            address: profileRow.address || '',
+          })
+        } else {
+          setProfileAddress({
+            name: user.user_metadata?.full_name || user.email,
+            phone: user.user_metadata?.phone || '',
+            address: '',
+          })
+        }
+      } catch (err) {
+        console.error('Unexpected error loading checkout profile', err)
+      } finally {
+        setIsLoadingProfile(false)
+      }
+    }
+
+    loadProfile()
+  }, [])
   const subtotal = checkoutItems.reduce(
     (sum, item) => sum + (item.product?.price || 0) * item.quantity,
     0
@@ -94,8 +144,8 @@ function CheckoutPage({ showToast, onNavigate, onOrderPlaced, checkoutItems = []
   }
 
   const handleChangeAddress = () => {
-    if (showToast) {
-      showToast('Address editing will be available soon (demo only).', 'info')
+    if (onNavigate) {
+      onNavigate('profile')
     }
   }
 
@@ -116,8 +166,21 @@ function CheckoutPage({ showToast, onNavigate, onOrderPlaced, checkoutItems = []
       <section className="checkout-section">
         <div className="checkout-card full">
           <p className="section-eyebrow">Delivery address</p>
-          <h2>Claudine Margaret Ricablanca (+63) 994 082 4135</h2>
-          <p>626 Cebu South Rd., Pardo (Pob.), Cebu City, Visayas, Cebu 6000</p>
+          {profileAddress ? (
+            <>
+              <h2>
+                {profileAddress.name}
+                {profileAddress.phone && ` (${profileAddress.phone})`}
+              </h2>
+              {profileAddress.address ? (
+                <p>{profileAddress.address}</p>
+              ) : (
+                <p>Please add your default delivery address in your Profile.</p>
+              )}
+            </>
+          ) : (
+            <p>{isLoadingProfile ? 'Loading your address...' : 'No address on file yet.'}</p>
+          )}
           <button type="button" className="link-btn subtle" onClick={handleChangeAddress}>
             Change
           </button>

@@ -36,8 +36,10 @@ const profileActions = [
 
 function OrdersPage() {
   const [latestOrder, setLatestOrder] = useState(null)
+  const [orders, setOrders] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [profileAddress, setProfileAddress] = useState(null)
 
   useEffect(() => {
     const loadLatestOrder = async () => {
@@ -52,19 +54,50 @@ function OrdersPage() {
         return
       }
 
-      const { data: orders, error: ordersError } = await supabase
+      const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('*')
         .eq('user_id', userResult.user.id)
         .order('created_at', { ascending: false })
-        .limit(1)
 
       if (ordersError) {
         console.error('Error loading orders from Supabase', ordersError)
-        setError('Failed to load your latest order.')
+        setError('Failed to load your orders.')
         setLatestOrder(null)
+        setOrders([])
       } else {
-        setLatestOrder(orders?.[0] || null)
+        setOrders(ordersData || [])
+        setLatestOrder(ordersData?.[0] || null)
+      }
+
+      try {
+        const user = userResult.user
+
+        const { data: profileRow, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (profileError) {
+          console.error('Error loading profile for orders page', profileError)
+        }
+
+        if (profileRow) {
+          setProfileAddress({
+            name: profileRow.full_name || user.user_metadata?.full_name || user.email,
+            phone: profileRow.phone || user.user_metadata?.phone || '',
+            address: profileRow.address || '',
+          })
+        } else {
+          setProfileAddress({
+            name: user.user_metadata?.full_name || user.email,
+            phone: user.user_metadata?.phone || '',
+            address: '',
+          })
+        }
+      } catch (err) {
+        console.error('Unexpected error loading profile for orders page', err)
       }
 
       setIsLoading(false)
@@ -82,6 +115,30 @@ function OrdersPage() {
   const orderNumber = latestOrder?.order_number || '#No-orders-yet'
   const paymentAmount = latestOrder ? formatCurrency(latestOrder.total_amount) : '0.00'
   const eta = latestOrder ? 'Today, 2:00 - 4:00 PM' : 'No active orders yet.'
+
+  const trackingStatus = latestOrder?.status || null
+
+  const computedTrackingSteps = trackingSteps.map((step, index) => {
+    let status = 'pending'
+
+    if (!trackingStatus) {
+      status = 'pending'
+    } else if (trackingStatus === 'Pending') {
+      status = index === 0 ? 'active' : 'pending'
+    } else if (trackingStatus === 'Packed') {
+      status = index === 0 ? 'done' : index === 1 ? 'active' : 'pending'
+    } else if (trackingStatus === 'Out for delivery') {
+      status = index <= 1 ? 'done' : index === 2 ? 'active' : 'pending'
+    } else if (trackingStatus === 'Delivered') {
+      status = index <= 2 ? 'done' : 'done'
+    } else if (trackingStatus === 'Cancelled') {
+      status = 'pending'
+    } else {
+      status = step.status || 'pending'
+    }
+
+    return { ...step, status }
+  })
 
   return (
     <main className="customer-module">
@@ -101,14 +158,20 @@ function OrdersPage() {
               <p>Order number</p>
               <strong>{orderNumber}</strong>
             </div>
-            <span className="badge">{latestOrder ? 'Paid' : 'No orders'}</span>
+            <span className="badge">{latestOrder ? latestOrder.status || 'Paid' : 'No orders'}</span>
           </div>
           <div className="order-card__grid">
             <div>
               <h4>Delivery Address</h4>
-              <p>Rica Blanca</p>
-              <p>12A Mango St., Quezon City, Metro Manila</p>
-              <p>Contact: +63 917 000 0000</p>
+              {profileAddress ? (
+                <>
+                  <p>{profileAddress.name}</p>
+                  {profileAddress.address && <p>{profileAddress.address}</p>}
+                  {profileAddress.phone && <p>Contact: {profileAddress.phone}</p>}
+                </>
+              ) : (
+                <p>Please set your default delivery address in your Profile.</p>
+              )}
             </div>
             <div>
               <h4>Payment</h4>
@@ -126,7 +189,7 @@ function OrdersPage() {
         <article className="order-tracking">
           <h3>Track order</h3>
           <div className="timeline">
-            {trackingSteps.map((step) => (
+            {computedTrackingSteps.map((step) => (
               <div className={`timeline-step ${step.status}`} key={step.title}>
                 <div className="timeline-dot" />
                 <div>
@@ -150,6 +213,40 @@ function OrdersPage() {
               <li key={action}>{action}</li>
             ))}
           </ul>
+        </article>
+      </section>
+
+      <section className="order-history-section">
+        <article className="order-history">
+          <h3>Your order history</h3>
+          {isLoading ? (
+            <p>Loading your orders...</p>
+          ) : orders.length === 0 ? (
+            <p>You haven't placed any orders yet.</p>
+          ) : (
+            <table className="order-history__table">
+              <thead>
+                <tr>
+                  <th>Order No.</th>
+                  <th>Date</th>
+                  <th>Items</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((order) => (
+                  <tr key={order.id}>
+                    <td>{order.order_number}</td>
+                    <td>{order.created_at ? new Date(order.created_at).toLocaleString() : '—'}</td>
+                    <td>{order.total_items}</td>
+                    <td>₱{formatCurrency(order.total_amount)}</td>
+                    <td>{order.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </article>
       </section>
     </main>

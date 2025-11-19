@@ -52,6 +52,7 @@ function App() {
   const [activePage, setActivePage] = useState('login')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [userRole, setUserRole] = useState(null)
+  const [userId, setUserId] = useState(null)
   const [cartItems, setCartItems] = useState([])
   const [toast, setToast] = useState(null)
   const [checkoutItems, setCheckoutItems] = useState([])
@@ -60,9 +61,13 @@ function App() {
   useEffect(() => {
     const authStatus = localStorage.getItem('isAuthenticated')
     const savedRole = localStorage.getItem('userRole')
+    const savedUserId = localStorage.getItem('userId')
     if (authStatus === 'true' && savedRole) {
       setIsAuthenticated(true)
       setUserRole(savedRole)
+      if (savedUserId) {
+        setUserId(savedUserId)
+      }
       setActivePage(savedRole === 'admin' ? 'adminDashboard' : 'home')
     }
   }, [])
@@ -81,6 +86,40 @@ function App() {
       console.error('Error loading cart from localStorage', err)
     }
   }, [])
+
+  // Load cart items from Supabase for logged-in users
+  useEffect(() => {
+    const loadCartFromSupabase = async () => {
+      if (!userId) return
+
+      try {
+        const { data, error } = await supabase
+          .from('cart_items')
+          .select('product_id, quantity, products(*)')
+          .eq('user_id', userId)
+
+        if (error) {
+          console.error('Error loading cart from Supabase', error)
+          return
+        }
+
+        const mapped =
+          data
+            ?.filter((row) => row.products)
+            .map((row) => ({
+              productId: row.product_id,
+              quantity: row.quantity,
+              product: row.products,
+            })) ?? []
+
+        setCartItems(mapped)
+      } catch (err) {
+        console.error('Unexpected error loading cart from Supabase', err)
+      }
+    }
+
+    loadCartFromSupabase()
+  }, [userId])
 
   useEffect(() => {
     if (!toast) return
@@ -102,12 +141,18 @@ function App() {
     setToast({ message, variant })
   }
 
-  const persistSession = (role, email, destination) => {
+  const persistSession = (role, email, destination, newUserId = null) => {
     setIsAuthenticated(true)
     setUserRole(role)
+    setUserId(newUserId || null)
     localStorage.setItem('isAuthenticated', 'true')
     localStorage.setItem('userRole', role)
     localStorage.setItem('userEmail', email)
+    if (newUserId) {
+      localStorage.setItem('userId', newUserId)
+    } else {
+      localStorage.removeItem('userId')
+    }
     setActivePage(destination)
     return { success: true }
   }
@@ -123,7 +168,7 @@ function App() {
 
       if (error || !data.user) {
         if (normalizedEmail === TEMP_CREDENTIALS.email && password === TEMP_CREDENTIALS.password) {
-          const result = persistSession('customer', normalizedEmail, 'home')
+          const result = persistSession('customer', normalizedEmail, 'home', null)
           showToast('Welcome back to LazShoppe! (demo login)', 'success')
           return result
         }
@@ -136,7 +181,7 @@ function App() {
       const role = roleFromMetadata === 'admin' || isAdminEmail ? 'admin' : 'customer'
       const destination = role === 'admin' ? 'adminDashboard' : 'home'
 
-      const result = persistSession(role, normalizedEmail, destination)
+      const result = persistSession(role, normalizedEmail, destination, data.user.id)
       showToast(
         role === 'admin' ? 'Logged in as admin' : 'Welcome back to LazShoppe!',
         'success'
@@ -157,35 +202,57 @@ function App() {
 
     setIsAuthenticated(false)
     setUserRole(null)
+    setUserId(null)
     setCartItems([])
     localStorage.removeItem('isAuthenticated')
     localStorage.removeItem('userEmail')
     localStorage.removeItem('userRole')
+    localStorage.removeItem('userId')
     localStorage.removeItem('cartItems')
     setActivePage('login')
     showToast('You have been logged out.', 'info')
   }
 
-  const handleAddToCart = (product, quantity = 1) => {
+  const handleAddToCart = async (product, quantity = 1) => {
     if (!product || !product.id || quantity <= 0) return
 
-    setCartItems((previous) => {
-      const existing = previous.find((item) => item.productId === product.id)
-      if (existing) {
-        return previous.map((item) =>
+    const existing = cartItems.find((item) => item.productId === product.id)
+    let newQuantity = quantity
+
+    if (existing) {
+      newQuantity = existing.quantity + quantity
+      setCartItems(
+        cartItems.map((item) =>
           item.productId === product.id
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: newQuantity }
             : item
         )
-      }
+      )
+    } else {
+      setCartItems([...cartItems, { productId: product.id, quantity, product }])
+    }
 
-      return [...previous, { productId: product.id, quantity, product }]
-    })
+    if (userId) {
+      try {
+        const { error } = await supabase
+          .from('cart_items')
+          .upsert(
+            { user_id: userId, product_id: product.id, quantity: newQuantity },
+            { onConflict: 'user_id,product_id' }
+          )
+
+        if (error) {
+          console.error('Error syncing cart item to Supabase', error)
+        }
+      } catch (err) {
+        console.error('Unexpected error syncing cart item to Supabase', err)
+      }
+    }
 
     showToast(`${product.name} added to cart`, 'success')
   }
 
-  const handleUpdateCartQuantity = (productId, delta) => {
+  const handleUpdateCartQuantity = async (productId, delta) => {
     setCartItems((previous) =>
       previous.map((item) =>
         item.productId === productId
@@ -193,12 +260,49 @@ function App() {
           : item
       )
     )
+
+    if (userId) {
+      const existing = cartItems.find((item) => item.productId === productId)
+      if (!existing) return
+
+      const newQuantity = Math.max(1, existing.quantity + delta)
+
+      try {
+        const { error } = await supabase
+          .from('cart_items')
+          .update({ quantity: newQuantity })
+          .eq('user_id', userId)
+          .eq('product_id', productId)
+
+        if (error) {
+          console.error('Error updating cart quantity in Supabase', error)
+        }
+      } catch (err) {
+        console.error('Unexpected error updating cart quantity in Supabase', err)
+      }
+    }
   }
 
-  const handleRemoveCartItems = (productIds) => {
+  const handleRemoveCartItems = async (productIds) => {
     if (!Array.isArray(productIds) || productIds.length === 0) return
 
     setCartItems((previous) => previous.filter((item) => !productIds.includes(item.productId)))
+
+    if (userId) {
+      try {
+        const { error } = await supabase
+          .from('cart_items')
+          .delete()
+          .eq('user_id', userId)
+          .in('product_id', productIds)
+
+        if (error) {
+          console.error('Error removing cart items from Supabase', error)
+        }
+      } catch (err) {
+        console.error('Unexpected error removing cart items from Supabase', err)
+      }
+    }
   }
 
   const handleStartCheckout = (selectedIds) => {
@@ -218,13 +322,31 @@ function App() {
     setActivePage('checkout')
   }
 
-  const handleOrderPlaced = () => {
+  const handleOrderPlaced = async () => {
+    const productIdsToRemove = checkoutItems.map((item) => item.productId)
+
     setCartItems((previous) =>
       previous.filter(
         (item) => !checkoutItems.some((selected) => selected.productId === item.productId)
       )
     )
     setCheckoutItems([])
+
+    if (userId && productIdsToRemove.length) {
+      try {
+        const { error } = await supabase
+          .from('cart_items')
+          .delete()
+          .eq('user_id', userId)
+          .in('product_id', productIdsToRemove)
+
+        if (error) {
+          console.error('Error clearing checked out items from Supabase cart', error)
+        }
+      } catch (err) {
+        console.error('Unexpected error clearing Supabase cart after order', err)
+      }
+    }
   }
 
   const handleRegister = async (userData) => {
@@ -248,7 +370,8 @@ function App() {
         return { success: false, message: error.message }
       }
 
-      const result = persistSession('customer', normalizedEmail, 'home')
+      const newUserId = data?.user?.id || null
+      const result = persistSession('customer', normalizedEmail, 'home', newUserId)
       showToast('Account created successfully. You are now signed in.', 'success')
       return result
     } catch (err) {

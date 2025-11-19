@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
 
 const sidebarSections = [
   {
@@ -29,6 +30,7 @@ const profileInfo = {
   phone: '********35',
   gender: 'Other',
   birthDate: '**/**/2002',
+  address: '12A Mango St., Quezon City, Metro Manila',
 }
 
 const orders = [
@@ -80,8 +82,112 @@ const orders = [
   },
 ]
 
-function ProfilePage() {
+function ProfilePage({ showToast }) {
   const [activeView, setActiveView] = useState('purchase')
+  const [profileData, setProfileData] = useState({
+    username: profileInfo.username,
+    name: profileInfo.name,
+    email: profileInfo.email,
+    phone: profileInfo.phone,
+    gender: profileInfo.gender,
+    birthDate: profileInfo.birthDate,
+    address: profileInfo.address,
+  })
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      setIsLoadingProfile(true)
+
+      try {
+        const { data: userResult, error: userError } = await supabase.auth.getUser()
+
+        if (userError || !userResult?.user) {
+          setIsLoadingProfile(false)
+          return
+        }
+
+        const user = userResult.user
+
+        const { data: profileRow, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (profileError) {
+          console.error('Error loading profile from Supabase', profileError)
+        }
+
+        setProfileData((previous) => ({
+          ...previous,
+          username: user.user_metadata?.username || previous.username,
+          name: profileRow?.full_name || user.user_metadata?.full_name || previous.name,
+          email: user.email || previous.email,
+          phone: profileRow?.phone || user.user_metadata?.phone || previous.phone,
+          birthDate: profileRow?.birth_date || previous.birthDate,
+          address: profileRow?.address || previous.address,
+        }))
+      } catch (err) {
+        console.error('Unexpected error loading profile from Supabase', err)
+      } finally {
+        setIsLoadingProfile(false)
+      }
+    }
+
+    loadProfile()
+  }, [])
+
+  const handleFieldChange = (field, value) => {
+    setProfileData((previous) => ({ ...previous, [field]: value }))
+  }
+
+  const handleSaveProfile = async () => {
+    if (isSaving) return
+
+    setIsSaving(true)
+
+    try {
+      const { data: userResult, error: userError } = await supabase.auth.getUser()
+
+      if (userError || !userResult?.user) {
+        console.error('Error getting Supabase user for profile save', userError)
+        setIsSaving(false)
+        return
+      }
+
+      const user = userResult.user
+
+      const updatePayload = {
+        id: user.id,
+        full_name: profileData.name,
+        phone: profileData.phone,
+        address: profileData.address,
+        birth_date: profileData.birthDate,
+      }
+
+      const { error } = await supabase
+        .from('profiles')
+        .upsert(updatePayload, { onConflict: 'id' })
+
+      if (error) {
+        console.error('Error saving profile to Supabase', error)
+        if (showToast) {
+          showToast('Failed to save profile. Please try again.', 'error')
+        }
+      } else if (showToast) {
+        showToast('Profile saved.', 'success')
+      }
+    } catch (err) {
+      console.error('Unexpected error saving profile to Supabase', err)
+      if (showToast) {
+        showToast('Failed to save profile. Please try again.', 'error')
+      }
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   const renderProfileDetails = () => (
     <section className="profile-account">
@@ -94,7 +200,7 @@ function ProfilePage() {
         <form className="profile-form">
           <div className="profile-field">
             <span className="field-label">Username</span>
-            <div className="field-value">{profileInfo.username}</div>
+            <div className="field-value">{profileData.username}</div>
           </div>
 
           <div className="profile-field">
@@ -102,15 +208,30 @@ function ProfilePage() {
               Name
             </label>
             <div className="field-input">
-              <input id="profile-name" type="text" defaultValue={profileInfo.name} />
+              <input
+                id="profile-name"
+                type="text"
+                value={profileData.name}
+                onChange={(event) => handleFieldChange('name', event.target.value)}
+              />
             </div>
           </div>
 
           <div className="profile-field">
             <span className="field-label">Email</span>
             <div className="field-value">
-              <span>{profileInfo.email}</span>
-              <button type="button" className="change-link">
+              <span>{profileData.email}</span>
+              <button
+                type="button"
+                className="change-link"
+                onClick={() =>
+                  showToast &&
+                  showToast(
+                    'Changing email is not available in this demo. Use your Supabase auth user to update it.',
+                    'info'
+                  )
+                }
+              >
                 Change
               </button>
             </div>
@@ -119,8 +240,15 @@ function ProfilePage() {
           <div className="profile-field">
             <span className="field-label">Phone Number</span>
             <div className="field-value">
-              <span>{profileInfo.phone}</span>
-              <button type="button" className="change-link">
+              <span>{profileData.phone}</span>
+              <button
+                type="button"
+                className="change-link"
+                onClick={() =>
+                  showToast &&
+                  showToast('Edit your phone number in the Default delivery address field for now.', 'info')
+                }
+              >
                 Change
               </button>
             </div>
@@ -133,7 +261,12 @@ function ProfilePage() {
             <div className="gender-options">
               {['Male', 'Female', 'Other'].map((option) => (
                 <label key={option} className="gender-option">
-                  <input type="radio" name="gender" checked={profileInfo.gender === option} readOnly />
+                  <input
+                    type="radio"
+                    name="gender"
+                    checked={profileData.gender === option}
+                    onChange={() => handleFieldChange('gender', option)}
+                  />
                   <span>{option}</span>
                 </label>
               ))}
@@ -143,15 +276,36 @@ function ProfilePage() {
           <div className="profile-field">
             <span className="field-label">Date of birth</span>
             <div className="field-value">
-              <span>{profileInfo.birthDate}</span>
-              <button type="button" className="change-link">
+              <span>{profileData.birthDate}</span>
+              <button
+                type="button"
+                className="change-link"
+                onClick={() =>
+                  showToast &&
+                  showToast('Date of birth editing is not implemented in this demo.', 'info')
+                }
+              >
                 Change
               </button>
             </div>
           </div>
 
+          <div className="profile-field">
+            <label htmlFor="profile-address" className="field-label">
+              Default delivery address
+            </label>
+            <div className="field-input">
+              <textarea
+                id="profile-address"
+                rows={3}
+                value={profileData.address}
+                onChange={(event) => handleFieldChange('address', event.target.value)}
+              />
+            </div>
+          </div>
+
           <div className="profile-actions">
-            <button type="button" className="profile-save">
+            <button type="button" className="profile-save" onClick={handleSaveProfile} disabled={isSaving}>
               Save
             </button>
           </div>
@@ -161,7 +315,14 @@ function ProfilePage() {
           <div className="profile-photo" aria-label="Profile photo">
             <span>RB</span>
           </div>
-          <button type="button" className="select-image-btn">
+          <button
+            type="button"
+            className="select-image-btn"
+            onClick={() =>
+              showToast &&
+              showToast('Profile photo upload is not implemented in this demo.', 'info')
+            }
+          >
             Select Image
           </button>
           <p>File size: maximum 1 MB</p>
@@ -203,7 +364,15 @@ function ProfilePage() {
                 </p>
                 <div className="store-actions">
                   {order.storeActions.map((storeAction) => (
-                    <button key={storeAction} type="button" className="store-action">
+                    <button
+                      key={storeAction}
+                      type="button"
+                      className="store-action"
+                      onClick={() =>
+                        showToast &&
+                        showToast('Store interactions are not implemented in this demo.', 'info')
+                      }
+                    >
                       {storeAction}
                     </button>
                   ))}
@@ -247,6 +416,15 @@ function ProfilePage() {
                     key={action}
                     type="button"
                     className={`order-action ${action === 'Buy Again' ? 'primary' : 'ghost'}`}
+                    onClick={() =>
+                      showToast &&
+                      showToast(
+                        action === 'Buy Again'
+                          ? 'Reordering is not implemented in this demo.'
+                          : 'Contact Seller is not implemented in this demo.',
+                        'info'
+                      )
+                    }
                   >
                     {action}
                   </button>
@@ -257,6 +435,7 @@ function ProfilePage() {
         ))}
       </div>
     </section>
+
   )
 
   return (
@@ -287,6 +466,16 @@ function ProfilePage() {
                     onClick={() => {
                       if (section.key === 'purchase') setActiveView('purchase')
                       if (section.key === 'account' && activeView !== 'profile') setActiveView('profile')
+                      if (
+                        section.key !== 'purchase' &&
+                        section.key !== 'account' &&
+                        showToast
+                      ) {
+                        showToast(
+                          'This section is for design only in this demo. Use Profile to edit your info.',
+                          'info'
+                        )
+                      }
                     }}
                   >
                     <span className="sidebar-icon" aria-hidden="true">
@@ -302,7 +491,13 @@ function ProfilePage() {
                           key={child.label}
                           type="button"
                           className={`sidebar-sublink ${activeView === child.key ? 'active' : ''}`}
-                          onClick={() => child.key === 'profile' && setActiveView('profile')}
+                          onClick={() => {
+                            if (child.key === 'profile') {
+                              setActiveView('profile')
+                            } else if (showToast) {
+                              showToast('This section is for design only in this demo. Use Profile to edit your info.', 'info')
+                            }
+                          }}
                         >
                           {child.label}
                         </button>
