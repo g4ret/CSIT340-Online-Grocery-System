@@ -1,41 +1,36 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabaseClient'
-
-const orderedProducts = [
-  { productId: 1, qty: 3 },
-  { productId: 3, qty: 3 },
-  { productId: 4, qty: 1 },
-  { productId: 2, qty: 3 },
-]
-
-function CheckoutPage({ showToast, onNavigate }) {
-  const [products, setProducts] = useState([])
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      const { data, error } = await supabase.from('products').select('*')
-
-      if (error) {
-        console.error('Error loading products from Supabase', error)
-      } else {
-        setProducts(data)
-      }
-    }
-
-    fetchProducts()
-  }, [])
-
-  const subtotal = orderedProducts.reduce((sum, item) => {
-    const product = products.find((p) => p.id === item.productId)
-    return sum + (product?.price || 0) * item.qty
-  }, 0)
+function CheckoutPage({ showToast, onNavigate, onOrderPlaced, checkoutItems = [] }) {
+  const subtotal = checkoutItems.reduce(
+    (sum, item) => sum + (item.product?.price || 0) * item.quantity,
+    0
+  )
 
   const handlePlaceOrder = () => {
     if (showToast) {
       showToast('Order placed successfully. You can track it in Orders & Tracking.', 'success')
     }
+    if (onOrderPlaced) {
+      onOrderPlaced()
+    }
     if (onNavigate) {
       onNavigate('orders')
+    }
+  }
+
+  const handleChangeAddress = () => {
+    if (showToast) {
+      showToast('Address editing will be available soon (demo only).', 'info')
+    }
+  }
+
+  const handleSelectVoucher = () => {
+    if (showToast) {
+      showToast('Voucher selection will be available soon (demo only).', 'info')
+    }
+  }
+
+  const handleChangePayment = () => {
+    if (showToast) {
+      showToast('Payment method change will be available soon (demo only).', 'info')
     }
   }
 
@@ -46,7 +41,7 @@ function CheckoutPage({ showToast, onNavigate }) {
           <p className="section-eyebrow">Delivery address</p>
           <h2>Claudine Margaret Ricablanca (+63) 994 082 4135</h2>
           <p>626 Cebu South Rd., Pardo (Pob.), Cebu City, Visayas, Cebu 6000</p>
-          <button type="button" className="link-btn subtle">
+          <button type="button" className="link-btn subtle" onClick={handleChangeAddress}>
             Change
           </button>
         </div>
@@ -57,23 +52,27 @@ function CheckoutPage({ showToast, onNavigate }) {
             <div className="merchant-title">
               Insta Threads PH <button className="link-btn subtle">Chat now</button>
             </div>
-            {orderedProducts.map((item) => {
-              const product = products.find((p) => p.id === item.productId)
+            {checkoutItems.map((item) => {
+              const product = item.product
+
               if (!product) {
                 return null
               }
+
               return (
-                <div className="checkout-row" key={product.id}>
+                <div className="checkout-row" key={item.productId}>
                   <div className="product-cell">
                     <img src={product.image} alt={product.name} />
                     <div>
                       <p>{product.name}</p>
-                      <small>Variation: {product.badge} • Qty {item.qty}</small>
+                      <small>
+                        Variation: {product.badge} • Qty {item.quantity}
+                      </small>
                     </div>
                   </div>
                   <div>₱{product.price}</div>
-                  <div>{item.qty}</div>
-                  <div>₱{product.price * item.qty}</div>
+                  <div>{item.quantity}</div>
+                  <div>₱{product.price * item.quantity}</div>
                 </div>
               )
             })}
@@ -82,7 +81,7 @@ function CheckoutPage({ showToast, onNavigate }) {
 
         <div className="checkout-card">
           <h3>Shop voucher</h3>
-          <button type="button" className="link-btn subtle">
+          <button type="button" className="link-btn subtle" onClick={handleSelectVoucher}>
             Select Voucher
           </button>
         </div>
@@ -96,7 +95,7 @@ function CheckoutPage({ showToast, onNavigate }) {
           <div>
             <h3>Payment Method</h3>
             <p>Cash on Delivery</p>
-            <button type="button" className="link-btn subtle">
+            <button type="button" className="link-btn subtle" onClick={handleChangePayment}>
               Change
             </button>
           </div>

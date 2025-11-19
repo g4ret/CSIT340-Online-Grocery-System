@@ -12,7 +12,7 @@ const categoryOptions = [
   'Bakery & Dairy',
 ]
 
-function CategoryPage({ onAddToCart }) {
+function CategoryPage({ onAddToCart, onNavigate, showToast }) {
   const [selectedCategory, setSelectedCategory] = useState('All')
 
   const [products, setProducts] = useState([])
@@ -39,6 +39,18 @@ function CategoryPage({ onAddToCart }) {
       ? products
       : products.filter((product) => product.category === selectedCategory)
 
+  const handleLike = () => {
+    if (showToast) {
+      showToast('Added to wishlist (demo only).', 'info')
+    }
+  }
+
+  const handleViewDetails = () => {
+    if (onNavigate) {
+      onNavigate('product')
+    }
+  }
+
   return (
     <main className="customer-module category-page">
       <div className="category-filter">
@@ -59,10 +71,10 @@ function CategoryPage({ onAddToCart }) {
           <article className="home-product-card" key={product.id}>
             <span className="discount-pill">-5%</span>
             <div className="product-actions">
-              <button type="button" aria-label="favorite">
+              <button type="button" aria-label="favorite" onClick={handleLike}>
                 ♡
               </button>
-              <button type="button" aria-label="view product">
+              <button type="button" aria-label="view product" onClick={handleViewDetails}>
                 👁
               </button>
             </div>

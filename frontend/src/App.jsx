@@ -53,6 +53,7 @@ function App() {
   const [userRole, setUserRole] = useState(null)
   const [cartItems, setCartItems] = useState([])
   const [toast, setToast] = useState(null)
+  const [checkoutItems, setCheckoutItems] = useState([])
 
   // Check if user is already logged in (from localStorage)
   useEffect(() => {
@@ -117,23 +118,65 @@ function App() {
     showToast('You have been logged out.', 'info')
   }
 
-  const handleAddToCart = (product) => {
-    if (!product || !product.id) return
+  const handleAddToCart = (product, quantity = 1) => {
+    if (!product || !product.id || quantity <= 0) return
 
     setCartItems((previous) => {
       const existing = previous.find((item) => item.productId === product.id)
       if (existing) {
         return previous.map((item) =>
           item.productId === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + quantity }
             : item
         )
       }
 
-      return [...previous, { productId: product.id, quantity: 1, product }]
+      return [...previous, { productId: product.id, quantity, product }]
     })
 
     showToast(`${product.name} added to cart`, 'success')
+  }
+
+  const handleUpdateCartQuantity = (productId, delta) => {
+    setCartItems((previous) =>
+      previous.map((item) =>
+        item.productId === productId
+          ? { ...item, quantity: Math.max(1, item.quantity + delta) }
+          : item
+      )
+    )
+  }
+
+  const handleRemoveCartItems = (productIds) => {
+    if (!Array.isArray(productIds) || productIds.length === 0) return
+
+    setCartItems((previous) => previous.filter((item) => !productIds.includes(item.productId)))
+  }
+
+  const handleStartCheckout = (selectedIds) => {
+    if (!Array.isArray(selectedIds) || selectedIds.length === 0) {
+      showToast('Select items to check out first.', 'info')
+      return
+    }
+
+    const selected = cartItems.filter((item) => selectedIds.includes(item.productId))
+
+    if (selected.length === 0) {
+      showToast('Selected items are no longer in your cart.', 'info')
+      return
+    }
+
+    setCheckoutItems(selected)
+    setActivePage('checkout')
+  }
+
+  const handleOrderPlaced = () => {
+    setCartItems((previous) =>
+      previous.filter(
+        (item) => !checkoutItems.some((selected) => selected.productId === item.productId)
+      )
+    )
+    setCheckoutItems([])
   }
 
   const handleRegister = (userData) => {
@@ -161,7 +204,11 @@ function App() {
     onLogout: handleLogout,
     activePage,
     cartItems,
+    checkoutItems,
     onAddToCart: handleAddToCart,
+    onUpdateCartQuantity: handleUpdateCartQuantity,
+    onRemoveCartItems: handleRemoveCartItems,
+    onOrderPlaced: handleOrderPlaced,
     showToast,
   }
 
@@ -169,7 +216,7 @@ function App() {
     activePage === 'addToCart'
       ? {
           ...sharedProps,
-          onCheckout: () => handleNavigate('checkout'),
+          onCheckout: (selectedIds) => handleStartCheckout(selectedIds),
         }
       : activePage === 'login'
         ? {

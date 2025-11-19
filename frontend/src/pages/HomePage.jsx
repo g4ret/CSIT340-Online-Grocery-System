@@ -35,8 +35,9 @@ const calculateDiscount = (originalPrice, currentPrice) => {
   return Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
 }
 
-function HomePage({ onNavigate, onAddToCart }) {
+function HomePage({ onNavigate, onAddToCart, showToast }) {
   const [products, setProducts] = useState([])
+  const [quantities, setQuantities] = useState({})
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -65,6 +66,38 @@ function HomePage({ onNavigate, onAddToCart }) {
     }
   }
 
+  const getQuantity = (productId) => quantities[productId] || 1
+
+  const handleQuantityChange = (productId, delta) => {
+    setQuantities((previous) => {
+      const current = previous[productId] || 1
+      const next = Math.max(1, current + delta)
+      return { ...previous, [productId]: next }
+    })
+  }
+
+  const handleAddToCartWithQuantity = (product) => {
+    if (!onAddToCart) return
+
+    const quantity = quantities[product.id] || 1
+    onAddToCart(product, quantity)
+  }
+
+  const handleShopNow = () => {
+    if (onNavigate) {
+      onNavigate('category')
+    }
+    if (showToast) {
+      showToast('Browsing more products in Categories.', 'info')
+    }
+  }
+
+  const handleViewAll = () => {
+    if (onNavigate) {
+      onNavigate('category')
+    }
+  }
+
   const topSavers = products.slice(0, 8).map((product) => {
     const originalPrice = product.price + Math.floor(product.price * 0.2)
     const discount = calculateDiscount(originalPrice, product.price)
@@ -80,7 +113,7 @@ function HomePage({ onNavigate, onAddToCart }) {
             <br />
             Quality & Freshness Guaranteed! Good Health.
           </h1>
-          <button type="button" className="shop-now-btn green">
+          <button type="button" className="shop-now-btn green" onClick={handleShopNow}>
             SHOP NOW
           </button>
         </div>
@@ -88,7 +121,7 @@ function HomePage({ onNavigate, onAddToCart }) {
           <h1>
             <span className="hero-orange">Fresh</span> <span className="hero-green">Vegetables</span>
           </h1>
-          <button type="button" className="shop-now-btn orange">
+          <button type="button" className="shop-now-btn orange" onClick={handleShopNow}>
             SHOP NOW
           </button>
         </div>
@@ -100,7 +133,7 @@ function HomePage({ onNavigate, onAddToCart }) {
             <h2>Top Savers Today</h2>
             <span className="discount-badge">20% OFF</span>
           </div>
-          <button type="button" className="view-all-link">
+          <button type="button" className="view-all-link" onClick={handleViewAll}>
             View All
           </button>
         </div>
@@ -127,9 +160,19 @@ function HomePage({ onNavigate, onAddToCart }) {
                 <span className="old-price">₱{product.originalPrice}</span>
               </div>
               <div className="quantity-selector">
-                <button type="button">-</button>
-                <span>1</span>
-                <button type="button">+</button>
+                <button
+                  type="button"
+                  onClick={() => handleQuantityChange(product.id, -1)}
+                >
+                  -
+                </button>
+                <span>{getQuantity(product.id)}</span>
+                <button
+                  type="button"
+                  onClick={() => handleQuantityChange(product.id, 1)}
+                >
+                  +
+                </button>
               </div>
               <button type="button" className="view-details-btn" onClick={goToProductDetails}>
                 View Details
@@ -137,7 +180,7 @@ function HomePage({ onNavigate, onAddToCart }) {
               <button
                 type="button"
                 className="add-cart-btn"
-                onClick={() => onAddToCart && onAddToCart(product)}
+                onClick={() => handleAddToCartWithQuantity(product)}
               >
                 🛒 Add to cart
               </button>
@@ -152,7 +195,7 @@ function HomePage({ onNavigate, onAddToCart }) {
             <p className="section-eyebrow">Best Offers View</p>
             <span className="discount-badge">20% OFF</span>
           </div>
-          <button type="button" className="view-all-link">
+          <button type="button" className="view-all-link" onClick={handleViewAll}>
             View All
           </button>
         </div>
