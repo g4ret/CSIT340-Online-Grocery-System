@@ -20,20 +20,22 @@ function LoginPage({ onNavigate, onLogin }) {
     e.preventDefault()
     setError('')
     setIsLoading(true)
-
-    // Simulate API call delay
-    setTimeout(() => {
-      if (onLogin) {
-        const result = onLogin(formData.email, formData.password)
-        if (!result.success) {
-          setError(result.message || 'Invalid credentials. Please try again.')
-          setIsLoading(false)
-        }
-      } else {
+    try {
+      if (!onLogin) {
         setError('Login function not available')
-        setIsLoading(false)
+        return
       }
-    }, 500)
+
+      const result = await onLogin(formData.email, formData.password)
+
+      if (!result.success) {
+        setError(result.message || 'Invalid credentials. Please try again.')
+      }
+    } catch (err) {
+      setError('Unable to sign in. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

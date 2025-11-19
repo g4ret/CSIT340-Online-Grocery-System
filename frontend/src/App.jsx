@@ -17,6 +17,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage'
 import AdminProductsPage from './pages/AdminProductsPage'
 import AdminOrdersPage from './pages/AdminOrdersPage'
 import AdminUsersPage from './pages/AdminUsersPage'
+import { supabase } from './lib/supabaseClient'
 
 const pages = {
   category: { label: 'Category', component: CategoryPage },
@@ -87,28 +88,49 @@ function App() {
     return { success: true }
   }
 
-  const handleLogin = (email, password) => {
-    // Temporary login check (replace with backend API call)
-    const isAdmin =
-      email.trim().toLowerCase() === ADMIN_CREDENTIALS.email &&
-      password === ADMIN_CREDENTIALS.password
+  const handleLogin = async (email, password) => {
+    const normalizedEmail = email.trim().toLowerCase()
 
-    if (isAdmin) {
-      const result = persistSession('admin', ADMIN_CREDENTIALS.email, 'adminDashboard')
-      showToast('Logged in as admin', 'success')
-      return result
-    }
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      })
 
-    if (email === TEMP_CREDENTIALS.email && password === TEMP_CREDENTIALS.password) {
-      const result = persistSession('customer', email, 'home')
-      showToast('Welcome back to LazShoppe!', 'success')
+      if (error || !data.user) {
+        if (normalizedEmail === TEMP_CREDENTIALS.email && password === TEMP_CREDENTIALS.password) {
+          const result = persistSession('customer', normalizedEmail, 'home')
+          showToast('Welcome back to LazShoppe! (demo login)', 'success')
+          return result
+        }
+
+        return { success: false, message: error?.message || 'Invalid email or password' }
+      }
+
+      const roleFromMetadata = data.user.user_metadata?.role
+      const isAdminEmail = normalizedEmail === ADMIN_CREDENTIALS.email
+      const role = roleFromMetadata === 'admin' || isAdminEmail ? 'admin' : 'customer'
+      const destination = role === 'admin' ? 'adminDashboard' : 'home'
+
+      const result = persistSession(role, normalizedEmail, destination)
+      showToast(
+        role === 'admin' ? 'Logged in as admin' : 'Welcome back to LazShoppe!',
+        'success'
+      )
       return result
-    } else {
-      return { success: false, message: 'Invalid email or password' }
+    } catch (err) {
+      console.error('Error during Supabase login', err)
+      return { success: false, message: 'Unable to sign in. Please try again.' }
     }
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+    } catch (err) {
+      console.error('Error signing out from Supabase', err)
+    }
+
     setIsAuthenticated(false)
     setUserRole(null)
     localStorage.removeItem('isAuthenticated')
@@ -179,12 +201,34 @@ function App() {
     setCheckoutItems([])
   }
 
-  const handleRegister = (userData) => {
-    // Temporary registration (just store in localStorage for demo)
-    // In real app, this would call backend API
-    const result = persistSession('customer', userData.email, 'home')
-    showToast('Account created successfully. You are now signed in.', 'success')
-    return result
+  const handleRegister = async (userData) => {
+    // Register customer using Supabase Auth
+    try {
+      const normalizedEmail = userData.email.trim().toLowerCase()
+
+      const { data, error } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password: userData.password,
+        options: {
+          data: {
+            full_name: userData.name,
+            phone: userData.phone,
+            role: 'customer',
+          },
+        },
+      })
+
+      if (error) {
+        return { success: false, message: error.message }
+      }
+
+      const result = persistSession('customer', normalizedEmail, 'home')
+      showToast('Account created successfully. You are now signed in.', 'success')
+      return result
+    } catch (err) {
+      console.error('Error during Supabase registration', err)
+      return { success: false, message: 'Unable to create account. Please try again.' }
+    }
   }
 
   const handleNavigate = (target) => {

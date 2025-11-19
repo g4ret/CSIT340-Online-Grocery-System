@@ -36,20 +36,22 @@ function RegisterPage({ onNavigate, onRegister }) {
     }
 
     setIsLoading(true)
-
-    // Simulate API call delay
-    setTimeout(() => {
-      if (onRegister) {
-        const result = onRegister(formData)
-        if (!result.success) {
-          setError(result.message || 'Registration failed. Please try again.')
-          setIsLoading(false)
-        }
-      } else {
+    try {
+      if (!onRegister) {
         setError('Registration function not available')
-        setIsLoading(false)
+        return
       }
-    }, 500)
+
+      const result = await onRegister(formData)
+
+      if (!result.success) {
+        setError(result.message || 'Registration failed. Please try again.')
+      }
+    } catch (err) {
+      setError('Registration failed. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
