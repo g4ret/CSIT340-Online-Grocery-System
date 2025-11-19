@@ -51,6 +51,8 @@ function App() {
   const [activePage, setActivePage] = useState('login')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [userRole, setUserRole] = useState(null)
+  const [cartItems, setCartItems] = useState([])
+  const [toast, setToast] = useState(null)
 
   // Check if user is already logged in (from localStorage)
   useEffect(() => {
@@ -62,6 +64,17 @@ function App() {
       setActivePage(savedRole === 'admin' ? 'adminDashboard' : 'home')
     }
   }, [])
+
+  useEffect(() => {
+    if (!toast) return
+
+    const timerId = setTimeout(() => setToast(null), 3000)
+    return () => clearTimeout(timerId)
+  }, [toast])
+
+  const showToast = (message, variant = 'success') => {
+    setToast({ message, variant })
+  }
 
   const persistSession = (role, email, destination) => {
     setIsAuthenticated(true)
@@ -80,11 +93,15 @@ function App() {
       password === ADMIN_CREDENTIALS.password
 
     if (isAdmin) {
-      return persistSession('admin', ADMIN_CREDENTIALS.email, 'adminDashboard')
+      const result = persistSession('admin', ADMIN_CREDENTIALS.email, 'adminDashboard')
+      showToast('Logged in as admin', 'success')
+      return result
     }
 
     if (email === TEMP_CREDENTIALS.email && password === TEMP_CREDENTIALS.password) {
-      return persistSession('customer', email, 'home')
+      const result = persistSession('customer', email, 'home')
+      showToast('Welcome back to LazShoppe!', 'success')
+      return result
     } else {
       return { success: false, message: 'Invalid email or password' }
     }
@@ -97,12 +114,34 @@ function App() {
     localStorage.removeItem('userEmail')
     localStorage.removeItem('userRole')
     setActivePage('login')
+    showToast('You have been logged out.', 'info')
+  }
+
+  const handleAddToCart = (product) => {
+    if (!product || !product.id) return
+
+    setCartItems((previous) => {
+      const existing = previous.find((item) => item.productId === product.id)
+      if (existing) {
+        return previous.map((item) =>
+          item.productId === product.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
+      }
+
+      return [...previous, { productId: product.id, quantity: 1, product }]
+    })
+
+    showToast(`${product.name} added to cart`, 'success')
   }
 
   const handleRegister = (userData) => {
     // Temporary registration (just store in localStorage for demo)
     // In real app, this would call backend API
-    return persistSession('customer', userData.email, 'home')
+    const result = persistSession('customer', userData.email, 'home')
+    showToast('Account created successfully. You are now signed in.', 'success')
+    return result
   }
 
   const handleNavigate = (target) => {
@@ -121,6 +160,9 @@ function App() {
     userRole,
     onLogout: handleLogout,
     activePage,
+    cartItems,
+    onAddToCart: handleAddToCart,
+    showToast,
   }
 
   const pageProps =
@@ -149,6 +191,7 @@ function App() {
           onNavigate={handleNavigate}
           onLogout={handleLogout}
           userRole={userRole}
+          cartCount={cartItems.reduce((sum, item) => sum + item.quantity, 0)}
         />
       )}
       <div className="page-container">
@@ -157,6 +200,11 @@ function App() {
         </div>
       </div>
       {isAuthenticated && <SiteFooter />}
+      {toast && (
+        <div className={`toast toast-${toast.variant}`}>
+          <span>{toast.message}</span>
+        </div>
+      )}
     </div>
   )
 }

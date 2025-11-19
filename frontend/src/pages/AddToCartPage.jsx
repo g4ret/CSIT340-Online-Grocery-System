@@ -1,32 +1,14 @@
-import products from '../data/products'
-
-const merchants = [
-  {
-    id: 'insta-threads',
-    name: 'Insta Threads PH',
-    items: [
-      { productId: 2, quantity: 3, variation: 'BLACK, XXL' },
-      { productId: 3, quantity: 3, variation: 'WHITE, XL' },
-      { productId: 1, quantity: 1, variation: 'RED, XXL' },
-      { productId: 5, quantity: 1, variation: 'KHAKI, XXL' },
-    ],
-  },
-]
-
-const computeSubtotal = (items) =>
-  items.reduce((sum, entry) => {
-    const product = products.find((p) => p.id === entry.productId)
-    return sum + (product?.price || 0) * entry.quantity
-  }, 0)
-
-function AddToCartPage({ onCheckout }) {
-  const totalItems = merchants.reduce(
-    (sum, merchant) => sum + merchant.items.reduce((count, item) => count + item.quantity, 0),
+function AddToCartPage({ cartItems = [], onCheckout, showToast }) {
+  const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0)
+  const totalPrice = cartItems.reduce(
+    (sum, item) => sum + (item.product?.price || 0) * item.quantity,
     0
   )
-  const totalPrice = merchants.reduce((sum, merchant) => sum + computeSubtotal(merchant.items), 0)
 
   const handleCheckout = () => {
+    if (showToast) {
+      showToast('Review your order details on the checkout page.', 'info')
+    }
     if (onCheckout) {
       onCheckout()
     }
@@ -44,23 +26,32 @@ function AddToCartPage({ onCheckout }) {
           <div>Actions</div>
         </div>
 
-        {merchants.map((merchant) => (
-          <article className="merchant-block" key={merchant.id}>
+        {cartItems.length === 0 && (
+          <p className="empty-cart">Your cart is empty.</p>
+        )}
+
+        {cartItems.length > 0 && (
+          <article className="merchant-block" key="cart-merchant">
             <div className="merchant-title">
               <label>
-                <input type="checkbox" /> {merchant.name}
+                <input type="checkbox" /> LazShoppe
               </label>
             </div>
-            {merchant.items.map((entry) => {
-              const product = products.find((p) => p.id === entry.productId)
+            {cartItems.map((entry) => {
+              const product = entry.product
+
+              if (!product) {
+                return null
+              }
+
               return (
-                <div className="cart-row" key={`${merchant.id}-${entry.productId}`}>
+                <div className="cart-row" key={entry.productId}>
                   <label className="product-cell">
                     <input type="checkbox" />
                     <img src={product.image} alt={product.name} />
                     <div>
                       <p>{product.name}</p>
-                      <small>Variations: {entry.variation}</small>
+                      <small>Qty: {entry.quantity}</small>
                     </div>
                   </label>
                   <strong>₱{product.price}</strong>
@@ -82,7 +73,7 @@ function AddToCartPage({ onCheckout }) {
               )
             })}
           </article>
-        ))}
+        )}
       </section>
 
       <footer className="cart-footer">

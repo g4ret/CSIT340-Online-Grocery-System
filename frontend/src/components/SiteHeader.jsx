@@ -13,7 +13,7 @@ const adminNavLinks = [
   { id: 'category', label: 'Catalog' },
 ]
 
-function SiteHeader({ activePage, onNavigate, onLogout, userRole }) {
+function SiteHeader({ activePage, onNavigate, onLogout, userRole, cartCount }) {
   const handleNavClick = (event, linkId) => {
     event.preventDefault()
     if (onNavigate) {
@@ -73,6 +73,15 @@ function SiteHeader({ activePage, onNavigate, onLogout, userRole }) {
 
         <div className="toolbar-actions">
           {userRole && <span className={`role-pill ${userRole}`}>{userRole}</span>}
+          {userRole !== 'admin' && (
+            <button
+              type="button"
+              className="cart-btn"
+              onClick={(event) => handleNavClick(event, 'addToCart')}
+            >
+              🛒 {cartCount ?? 0}
+            </button>
+          )}
           <button
             type="button"
             aria-label="logout"

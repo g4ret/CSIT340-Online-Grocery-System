@@ -1,22 +1,41 @@
-import { useMemo, useState } from 'react'
-import products from '../data/products'
+import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
 
 const orderStatuses = ['All Orders', 'Pending', 'Packed', 'Out for delivery', 'Delivered']
 
-const ordersData = products.map((product, index) => ({
-  id: `ORD-${1020 + index}`,
-  productName: product.name,
-  category: product.category,
-  price: product.price + index * 3,
-  qty: (index + 1) * 2,
-  status: ['Pending', 'Packed', 'Out for delivery', 'Delivered'][index % 4],
-  badge: product.badge,
-  image: product.image,
-}))
-
 function AdminOrdersPage({ onNavigate }) {
+  const [products, setProducts] = useState([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Orders')
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data, error } = await supabase.from('products').select('*')
+
+      if (error) {
+        console.error('Error loading products from Supabase', error)
+      } else {
+        setProducts(data)
+      }
+    }
+
+    fetchProducts()
+  }, [])
+
+  const ordersData = useMemo(
+    () =>
+      products.map((product, index) => ({
+        id: `ORD-${1020 + index}`,
+        productName: product.name,
+        category: product.category,
+        price: product.price + index * 3,
+        qty: (index + 1) * 2,
+        status: ['Pending', 'Packed', 'Out for delivery', 'Delivered'][index % 4],
+        badge: product.badge,
+        image: product.image,
+      })),
+    [products]
+  )
 
   const filteredOrders = useMemo(() => {
     return ordersData.filter((order) => {
@@ -24,7 +43,7 @@ function AdminOrdersPage({ onNavigate }) {
       const matchesStatus = statusFilter === 'All Orders' || order.status === statusFilter
       return matchesSearch && matchesStatus
     })
-  }, [search, statusFilter])
+  }, [ordersData, search, statusFilter])
 
   return (
     <main className="admin-orders">

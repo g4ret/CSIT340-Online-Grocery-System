@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import products from '../data/products'
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabaseClient'
 
 const categoryOptions = [
   'All',
@@ -12,8 +12,27 @@ const categoryOptions = [
   'Bakery & Dairy',
 ]
 
-function CategoryPage() {
+function CategoryPage({ onAddToCart }) {
   const [selectedCategory, setSelectedCategory] = useState('All')
+
+  const [products, setProducts] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data, error } = await supabase.from('products').select('*')
+
+      if (error) {
+        console.error('Error loading products from Supabase', error)
+      } else {
+        setProducts(data)
+      }
+
+      setIsLoading(false)
+    }
+
+    fetchProducts()
+  }, [])
 
   const filteredProducts =
     selectedCategory === 'All'
@@ -54,7 +73,11 @@ function CategoryPage() {
               <strong>₱{product.price}</strong>
               <span className="old-price">₱{product.price + 10}</span>
             </div>
-            <button type="button" className="primary-btn wide">
+            <button
+              type="button"
+              className="primary-btn wide"
+              onClick={() => onAddToCart && onAddToCart(product)}
+            >
               Add To Cart
             </button>
           </article>

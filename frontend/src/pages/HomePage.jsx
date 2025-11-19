@@ -1,4 +1,5 @@
-import products from '../data/products'
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
 
 const categories = [
   { icon: '🥫', label: 'Pantry Essentials', count: 1 },
@@ -34,7 +35,23 @@ const calculateDiscount = (originalPrice, currentPrice) => {
   return Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
 }
 
-function HomePage({ onNavigate }) {
+function HomePage({ onNavigate, onAddToCart }) {
+  const [products, setProducts] = useState([])
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data, error } = await supabase.from('products').select('*')
+
+      if (error) {
+        console.error('Error loading products from Supabase', error)
+      } else {
+        setProducts(data)
+      }
+    }
+
+    fetchProducts()
+  }, [])
+
   const goToProductDetails = () => {
     if (onNavigate) {
       onNavigate('product')
@@ -117,7 +134,11 @@ function HomePage({ onNavigate }) {
               <button type="button" className="view-details-btn" onClick={goToProductDetails}>
                 View Details
               </button>
-              <button type="button" className="add-cart-btn">
+              <button
+                type="button"
+                className="add-cart-btn"
+                onClick={() => onAddToCart && onAddToCart(product)}
+              >
                 🛒 Add to cart
               </button>
             </article>
@@ -165,7 +186,11 @@ function HomePage({ onNavigate }) {
               <button type="button" className="view-details-btn" onClick={goToProductDetails}>
                 View Details
               </button>
-              <button type="button" className="add-cart-btn">
+              <button
+                type="button"
+                className="add-cart-btn"
+                onClick={() => onAddToCart && onAddToCart(product)}
+              >
                 🛒 Add to cart
               </button>
             </article>

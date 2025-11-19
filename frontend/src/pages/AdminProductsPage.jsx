@@ -1,11 +1,29 @@
-import { useMemo, useState } from 'react'
-import products from '../data/products'
-
-const filterOptions = ['All Categories', ...new Set(products.map((item) => item.category))]
+import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
 
 function AdminProductsPage({ onNavigate }) {
+  const [products, setProducts] = useState([])
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All Categories')
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data, error } = await supabase.from('products').select('*')
+
+      if (error) {
+        console.error('Error loading products from Supabase', error)
+      } else {
+        setProducts(data)
+      }
+    }
+
+    fetchProducts()
+  }, [])
+
+  const filterOptions = useMemo(
+    () => ['All Categories', ...new Set(products.map((item) => item.category))],
+    [products]
+  )
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
@@ -13,7 +31,7 @@ function AdminProductsPage({ onNavigate }) {
       const matchesCategory = category === 'All Categories' || product.category === category
       return matchesSearch && matchesCategory
     })
-  }, [search, category])
+  }, [search, category, products])
 
   const handleAddProduct = () => {
     alert('Add product flow will be connected to backend soon.')

@@ -1,4 +1,5 @@
-import products from '../data/products'
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
 
 const orderedProducts = [
   { productId: 1, qty: 3 },
@@ -7,12 +8,37 @@ const orderedProducts = [
   { productId: 2, qty: 3 },
 ]
 
-const subtotal = orderedProducts.reduce((sum, item) => {
-  const product = products.find((p) => p.id === item.productId)
-  return sum + (product?.price || 0) * item.qty
-}, 0)
+function CheckoutPage({ showToast, onNavigate }) {
+  const [products, setProducts] = useState([])
 
-function CheckoutPage() {
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data, error } = await supabase.from('products').select('*')
+
+      if (error) {
+        console.error('Error loading products from Supabase', error)
+      } else {
+        setProducts(data)
+      }
+    }
+
+    fetchProducts()
+  }, [])
+
+  const subtotal = orderedProducts.reduce((sum, item) => {
+    const product = products.find((p) => p.id === item.productId)
+    return sum + (product?.price || 0) * item.qty
+  }, 0)
+
+  const handlePlaceOrder = () => {
+    if (showToast) {
+      showToast('Order placed successfully. You can track it in Orders & Tracking.', 'success')
+    }
+    if (onNavigate) {
+      onNavigate('orders')
+    }
+  }
+
   return (
     <main className="customer-module checkout-page">
       <section className="checkout-section">
@@ -33,6 +59,9 @@ function CheckoutPage() {
             </div>
             {orderedProducts.map((item) => {
               const product = products.find((p) => p.id === item.productId)
+              if (!product) {
+                return null
+              }
               return (
                 <div className="checkout-row" key={product.id}>
                   <div className="product-cell">
@@ -85,7 +114,7 @@ function CheckoutPage() {
               <strong>₱{subtotal + 175}</strong>
             </div>
           </div>
-          <button type="button" className="checkout-btn wide">
+          <button type="button" className="checkout-btn wide" onClick={handlePlaceOrder}>
             Place Order
           </button>
         </div>
