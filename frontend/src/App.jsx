@@ -67,12 +67,36 @@ function App() {
     }
   }, [])
 
+  // Restore cart items from localStorage on first load
+  useEffect(() => {
+    try {
+      const storedCart = localStorage.getItem('cartItems')
+      if (storedCart) {
+        const parsed = JSON.parse(storedCart)
+        if (Array.isArray(parsed)) {
+          setCartItems(parsed)
+        }
+      }
+    } catch (err) {
+      console.error('Error loading cart from localStorage', err)
+    }
+  }, [])
+
   useEffect(() => {
     if (!toast) return
 
     const timerId = setTimeout(() => setToast(null), 3000)
     return () => clearTimeout(timerId)
   }, [toast])
+
+  // Persist cart items to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('cartItems', JSON.stringify(cartItems))
+    } catch (err) {
+      console.error('Error saving cart to localStorage', err)
+    }
+  }, [cartItems])
 
   const showToast = (message, variant = 'success') => {
     setToast({ message, variant })
@@ -133,9 +157,11 @@ function App() {
 
     setIsAuthenticated(false)
     setUserRole(null)
+    setCartItems([])
     localStorage.removeItem('isAuthenticated')
     localStorage.removeItem('userEmail')
     localStorage.removeItem('userRole')
+    localStorage.removeItem('cartItems')
     setActivePage('login')
     showToast('You have been logged out.', 'info')
   }

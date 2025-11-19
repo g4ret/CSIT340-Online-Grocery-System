@@ -4,42 +4,53 @@ import { supabase } from '../lib/supabaseClient'
 const orderStatuses = ['All Orders', 'Pending', 'Packed', 'Out for delivery', 'Delivered']
 
 function AdminOrdersPage({ onNavigate }) {
-  const [products, setProducts] = useState([])
+  const [orders, setOrders] = useState([])
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Orders')
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      const { data, error } = await supabase.from('products').select('*')
+    const fetchOrders = async () => {
+      setIsLoading(true)
+      setError(null)
+
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('Error loading products from Supabase', error)
+        console.error('Error loading orders from Supabase', error)
+        setError('Failed to load orders.')
+        setOrders([])
       } else {
-        setProducts(data)
+        setOrders(data || [])
       }
+
+      setIsLoading(false)
     }
 
-    fetchProducts()
+    fetchOrders()
   }, [])
 
   const ordersData = useMemo(
     () =>
-      products.map((product, index) => ({
-        id: `ORD-${1020 + index}`,
-        productName: product.name,
-        category: product.category,
-        price: product.price + index * 3,
-        qty: (index + 1) * 2,
-        status: ['Pending', 'Packed', 'Out for delivery', 'Delivered'][index % 4],
-        badge: product.badge,
-        image: product.image,
+      orders.map((order) => ({
+        id: order.id,
+        orderNumber: order.order_number,
+        status: order.status || 'Pending',
+        totalAmount: Number(order.total_amount) || 0,
+        totalItems: order.total_items || 0,
+        createdAt: order.created_at,
       })),
-    [products]
+    [orders]
   )
 
   const filteredOrders = useMemo(() => {
     return ordersData.filter((order) => {
-      const matchesSearch = order.id.toLowerCase().includes(search.toLowerCase().trim())
+      const matchesSearch =
+        order.orderNumber?.toLowerCase().includes(search.toLowerCase().trim()) || false
       const matchesStatus = statusFilter === 'All Orders' || order.status === statusFilter
       return matchesSearch && matchesStatus
     })
@@ -77,27 +88,27 @@ function AdminOrdersPage({ onNavigate }) {
 
         <section className="admin-orders__table">
           <header>
-            <span>Product</span>
-            <span>Category</span>
-            <span>Order ID</span>
-            <span>Price</span>
+            <span>Order</span>
+            <span>Date</span>
+            <span>Order No.</span>
+            <span>Total</span>
             <span>Status</span>
             <span>Actions</span>
           </header>
           {filteredOrders.map((order) => (
             <article key={order.id}>
               <div className="product-meta">
-                <img src={order.image} alt={order.productName} />
                 <div>
-                  <strong>{order.productName}</strong>
-                  <p>{order.qty} items</p>
+                  <strong>Order {order.orderNumber || order.id}</strong>
+                  <p>{order.totalItems} items</p>
                 </div>
               </div>
-              <span>{order.category}</span>
-              <span>{order.id}</span>
+              <span>
+                {order.createdAt ? new Date(order.createdAt).toLocaleString() : '—'}
+              </span>
+              <span>{order.orderNumber || '—'}</span>
               <div className="price-stack">
-                <strong>₱{(order.price * order.qty).toFixed(2)}</strong>
-                <small className="muted">₱{(order.price * order.qty * 1.05).toFixed(2)}</small>
+                <strong>₱{order.totalAmount.toFixed(2)}</strong>
               </div>
               <span className={`status-badge ${order.status.replace(/\s+/g, '-').toLowerCase()}`}>
                 {order.status}

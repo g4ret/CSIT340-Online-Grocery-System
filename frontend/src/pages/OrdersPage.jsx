@@ -1,3 +1,6 @@
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
+
 const trackingSteps = [
   {
     title: 'Order Confirmation',
@@ -32,8 +35,53 @@ const profileActions = [
 ]
 
 function OrdersPage() {
-  const orderNumber = '#OGS-2025-00082'
-  const eta = 'Today, 2:00 - 4:00 PM'
+  const [latestOrder, setLatestOrder] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const loadLatestOrder = async () => {
+      setIsLoading(true)
+      setError(null)
+
+      const { data: userResult, error: userError } = await supabase.auth.getUser()
+
+      if (userError || !userResult?.user) {
+        setLatestOrder(null)
+        setIsLoading(false)
+        return
+      }
+
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('user_id', userResult.user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      if (ordersError) {
+        console.error('Error loading orders from Supabase', ordersError)
+        setError('Failed to load your latest order.')
+        setLatestOrder(null)
+      } else {
+        setLatestOrder(orders?.[0] || null)
+      }
+
+      setIsLoading(false)
+    }
+
+    loadLatestOrder()
+  }, [])
+
+  const formatCurrency = (value) => {
+    const numeric = typeof value === 'number' ? value : Number(value)
+    if (!Number.isFinite(numeric)) return '0.00'
+    return numeric.toFixed(2)
+  }
+
+  const orderNumber = latestOrder?.order_number || '#No-orders-yet'
+  const paymentAmount = latestOrder ? formatCurrency(latestOrder.total_amount) : '0.00'
+  const eta = latestOrder ? 'Today, 2:00 - 4:00 PM' : 'No active orders yet.'
 
   return (
     <main className="customer-module">
@@ -53,7 +101,7 @@ function OrdersPage() {
               <p>Order number</p>
               <strong>{orderNumber}</strong>
             </div>
-            <span className="badge">Paid</span>
+            <span className="badge">{latestOrder ? 'Paid' : 'No orders'}</span>
           </div>
           <div className="order-card__grid">
             <div>
@@ -64,8 +112,8 @@ function OrdersPage() {
             </div>
             <div>
               <h4>Payment</h4>
-              <p>Gcash •••• 1298</p>
-              <p>₱615.00</p>
+              <p>Cash on Delivery</p>
+              <p>₱{paymentAmount}</p>
             </div>
             <div>
               <h4>ETA</h4>
