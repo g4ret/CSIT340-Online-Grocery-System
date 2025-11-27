@@ -35,7 +35,7 @@ const calculateDiscount = (originalPrice, currentPrice) => {
   return Math.round(((originalPrice - currentPrice) / originalPrice) * 100)
 }
 
-function HomePage({ onNavigate, onAddToCart, showToast }) {
+function HomePage({ onNavigate, onAddToCart, showToast, onViewProductDetails }) {
   const [products, setProducts] = useState([])
   const [quantities, setQuantities] = useState({})
 
@@ -53,16 +53,20 @@ function HomePage({ onNavigate, onAddToCart, showToast }) {
     fetchProducts()
   }, [])
 
-  const goToProductDetails = () => {
+  const goToProductDetails = (product) => {
+    if (onViewProductDetails && product) {
+      onViewProductDetails(product)
+      return
+    }
     if (onNavigate) {
       onNavigate('product')
     }
   }
 
-  const handleKeyNavigate = (event) => {
+  const handleKeyNavigate = (product, event) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
-      goToProductDetails()
+      goToProductDetails(product)
     }
   }
 
@@ -146,10 +150,15 @@ function HomePage({ onNavigate, onAddToCart, showToast }) {
                 src={product.image}
                 alt={product.name}
                 loading="lazy"
-                onClick={goToProductDetails}
+                onClick={() => goToProductDetails(product)}
                 className="product-thumb"
               />
-              <h3 onClick={goToProductDetails} role="link" tabIndex={0} onKeyDown={handleKeyNavigate}>
+              <h3
+                onClick={() => goToProductDetails(product)}
+                role="link"
+                tabIndex={0}
+                onKeyDown={(event) => handleKeyNavigate(product, event)}
+              >
                 {product.name}
               </h3>
               <div className="stock-status">
@@ -174,7 +183,11 @@ function HomePage({ onNavigate, onAddToCart, showToast }) {
                   +
                 </button>
               </div>
-              <button type="button" className="view-details-btn" onClick={goToProductDetails}>
+              <button
+                type="button"
+                className="view-details-btn"
+                onClick={() => goToProductDetails(product)}
+              >
                 View Details
               </button>
               <button
@@ -208,10 +221,15 @@ function HomePage({ onNavigate, onAddToCart, showToast }) {
                 src={product.image}
                 alt={product.name}
                 loading="lazy"
-                onClick={goToProductDetails}
+                onClick={() => goToProductDetails(product)}
                 className="product-thumb"
               />
-              <h3 onClick={goToProductDetails} role="link" tabIndex={0} onKeyDown={handleKeyNavigate}>
+              <h3
+                onClick={() => goToProductDetails(product)}
+                role="link"
+                tabIndex={0}
+                onKeyDown={(event) => handleKeyNavigate(product, event)}
+              >
                 {product.name}
               </h3>
               <div className="stock-status">
@@ -226,7 +244,11 @@ function HomePage({ onNavigate, onAddToCart, showToast }) {
                 <span>1</span>
                 <button type="button">+</button>
               </div>
-              <button type="button" className="view-details-btn" onClick={goToProductDetails}>
+              <button
+                type="button"
+                className="view-details-btn"
+                onClick={() => goToProductDetails(product)}
+              >
                 View Details
               </button>
               <button

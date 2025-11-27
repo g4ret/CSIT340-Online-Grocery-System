@@ -1,8 +1,12 @@
 import { useState } from 'react'
 
-const product = {
+const demoProduct = {
   id: 999,
   name: 'Ligo Easy Open Can Sardines In Tomato Sauce 155g',
+  price: 285,
+  unit: 'pack',
+  badge: 'Best Seller',
+  category: 'Pantry Essentials',
   packPrice: '₱142.50 (6pcs)',
   srp: '₱150.00',
   featuredPrice: '₱285.00',
@@ -67,17 +71,27 @@ const relatedProducts = [
   },
 ]
 
-function ProductDetailsPage({ onAddToCart, showToast }) {
+function ProductDetailsPage({ selectedProduct, onAddToCart, showToast }) {
   const [quantity, setQuantity] = useState(1)
 
+  const currentProduct = {
+    ...demoProduct,
+    ...(selectedProduct || {}),
+  }
+
+  const basePrice = typeof currentProduct.price === 'number' ? currentProduct.price : 285
+  const packPriceLabel = `₱${basePrice.toFixed(2)}`
+  const srpLabel = `₱${(basePrice * 1.1).toFixed(2)}`
+  const featuredPriceLabel = `₱${(basePrice * quantity).toFixed(2)}`
+
   const baseCartProduct = {
-    id: product.id,
-    name: product.name,
-    price: 285,
-    unit: 'pack',
-    badge: 'Best Seller',
-    category: 'Pantry Essentials',
-    image: product.image,
+    id: currentProduct.id,
+    name: currentProduct.name,
+    price: basePrice,
+    unit: currentProduct.unit || 'pack',
+    badge: currentProduct.badge || 'Best Seller',
+    category: currentProduct.category || 'Pantry Essentials',
+    image: currentProduct.image,
   }
 
   const handlePrimaryAddToCart = () => {
@@ -143,20 +157,20 @@ function ProductDetailsPage({ onAddToCart, showToast }) {
 
         <section className="product-summary-card">
           <div className="product-summary__media">
-            <img src={product.image} alt={product.name} />
+            <img src={currentProduct.image} alt={currentProduct.name} />
           </div>
 
           <div className="product-summary__info">
-            <h1>{product.name}</h1>
+            <h1>{currentProduct.name}</h1>
             <p className="product-sub-price">
-              {product.packPrice} <span>{product.srp}</span>
+              {packPriceLabel} <span>{srpLabel}</span>
             </p>
 
             <div className="product-variants">
               <div>
                 <span>Variants:</span>
                 <div className="variant-swatches">
-                  {product.variants.map((variant) => (
+                  {(currentProduct.variants || demoProduct.variants).map((variant) => (
                     <button
                       key={variant.id}
                       type="button"
@@ -172,7 +186,7 @@ function ProductDetailsPage({ onAddToCart, showToast }) {
               <div>
                 <span>Size:</span>
                 <div className="size-selector">
-                  {product.sizes.map((size, idx) => (
+                  {(currentProduct.sizes || demoProduct.sizes).map((size, idx) => (
                     <button key={size} type="button" className={`size-pill ${idx === 0 ? 'active' : ''}`}>
                       {size}
                     </button>
@@ -181,7 +195,7 @@ function ProductDetailsPage({ onAddToCart, showToast }) {
               </div>
             </div>
 
-            <div className="product-featured-price">{product.featuredPrice}</div>
+            <div className="product-featured-price">{featuredPriceLabel}</div>
 
             <div className="product-quantity">
               <button type="button" aria-label="Decrease quantity" onClick={handleDecrement}>

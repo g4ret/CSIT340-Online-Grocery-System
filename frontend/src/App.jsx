@@ -56,6 +56,7 @@ function App() {
   const [cartItems, setCartItems] = useState([])
   const [toast, setToast] = useState(null)
   const [checkoutItems, setCheckoutItems] = useState([])
+  const [selectedProduct, setSelectedProduct] = useState(null)
 
   // Check if user is already logged in (from localStorage)
   useEffect(() => {
@@ -283,6 +284,12 @@ function App() {
     }
   }
 
+  const handleViewProductDetails = (product) => {
+    if (!product || !product.id) return
+    setSelectedProduct(product)
+    setActivePage('product')
+  }
+
   const handleRemoveCartItems = async (productIds) => {
     if (!Array.isArray(productIds) || productIds.length === 0) return
 
@@ -398,11 +405,13 @@ function App() {
     activePage,
     cartItems,
     checkoutItems,
+    selectedProduct,
     onAddToCart: handleAddToCart,
     onUpdateCartQuantity: handleUpdateCartQuantity,
     onRemoveCartItems: handleRemoveCartItems,
     onOrderPlaced: handleOrderPlaced,
     showToast,
+    onViewProductDetails: handleViewProductDetails,
   }
 
   const pageProps =

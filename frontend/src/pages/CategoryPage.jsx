@@ -12,7 +12,7 @@ const categoryOptions = [
   'Bakery & Dairy',
 ]
 
-function CategoryPage({ onAddToCart, onNavigate, showToast }) {
+function CategoryPage({ onAddToCart, onNavigate, showToast, onViewProductDetails }) {
   const [selectedCategory, setSelectedCategory] = useState('All')
 
   const [products, setProducts] = useState([])
@@ -45,7 +45,11 @@ function CategoryPage({ onAddToCart, onNavigate, showToast }) {
     }
   }
 
-  const handleViewDetails = () => {
+  const handleViewDetails = (product) => {
+    if (onViewProductDetails && product) {
+      onViewProductDetails(product)
+      return
+    }
     if (onNavigate) {
       onNavigate('product')
     }
@@ -74,7 +78,11 @@ function CategoryPage({ onAddToCart, onNavigate, showToast }) {
               <button type="button" aria-label="favorite" onClick={handleLike}>
                 ♡
               </button>
-              <button type="button" aria-label="view product" onClick={handleViewDetails}>
+              <button
+                type="button"
+                aria-label="view product"
+                onClick={() => handleViewDetails(product)}
+              >
                 👁
               </button>
             </div>
