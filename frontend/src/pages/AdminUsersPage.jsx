@@ -69,12 +69,65 @@ function AdminUsersPage({ onNavigate, showToast }) {
     fetchUsers()
   }
 
-  const handleEditUser = (user) => {
-    if (showToast) {
-      showToast(
-        `Editing user roles and permissions is not implemented in this demo yet (user: ${user.email}).`,
-        'info'
+  const handleEditUser = async (user) => {
+    if (!user) return
+
+    const currentRole = user.role || 'Customer'
+    const input = window.prompt(
+      'Enter new role for this user (Customer, Delivery, Admin):',
+      currentRole
+    )
+
+    if (!input) {
+      return
+    }
+
+    const nextRole = input.trim()
+
+    if (!['Customer', 'Delivery', 'Admin'].includes(nextRole)) {
+      if (showToast) {
+        showToast('Invalid role. Please use Customer, Delivery, or Admin.', 'error')
+      }
+      return
+    }
+
+    if (nextRole === currentRole) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: nextRole })
+        .eq('id', user.id)
+
+      if (error) {
+        console.error('Error updating user role in Supabase profiles', error)
+        if (showToast) {
+          showToast('Failed to update user role. Please try again.', 'error')
+        }
+        return
+      }
+
+      setUsers((previous) =>
+        previous.map((entry) =>
+          entry.id === user.id
+            ? {
+                ...entry,
+                role: nextRole,
+              }
+            : entry
+        )
       )
+
+      if (showToast) {
+        showToast('User role updated.', 'success')
+      }
+    } catch (err) {
+      console.error('Unexpected error updating user role in Supabase profiles', err)
+      if (showToast) {
+        showToast('Failed to update user role. Please try again.', 'error')
+      }
     }
   }
 

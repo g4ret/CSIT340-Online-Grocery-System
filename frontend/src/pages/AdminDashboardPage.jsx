@@ -1,23 +1,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
-const pickupOrders = [
-  { customer: 'Felix Ramos', schedule: '11:00 AM', amount: 8450, status: 'Ready' },
-  { customer: 'Anya Lira', schedule: '1:30 PM', amount: 4250, status: 'Packing' },
-]
-
-const activeDelivery = {
-  rider: 'James Bond',
-  orderId: 'ORD-1050',
-  distance: '4.2 km away',
-  status: 'In transit',
-}
-
 function AdminDashboardPage({ onNavigate, showToast }) {
   const [productCount, setProductCount] = useState(0)
   const [orderCount, setOrderCount] = useState(0)
   const [userCount, setUserCount] = useState(0)
   const [pendingOrders, setPendingOrders] = useState([])
+  const [pickupOrders, setPickupOrders] = useState([])
+  const [activeDelivery, setActiveDelivery] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -68,7 +58,9 @@ function AdminDashboardPage({ onNavigate, showToast }) {
         setError('Failed to load pending orders.')
         setPendingOrders([])
       } else {
-        const userIds = Array.from(new Set((ordersData || []).map((order) => order.user_id).filter(Boolean)))
+        const userIds = Array.from(
+          new Set((ordersData || []).map((order) => order.user_id).filter(Boolean))
+        )
         let profilesById = {}
 
         if (userIds.length) {
@@ -87,26 +79,62 @@ function AdminDashboardPage({ onNavigate, showToast }) {
           }
         }
 
-        const mapped = (ordersData || []).map((order) => {
+        const allOrders = ordersData || []
+        const deliveryRows = []
+        const pickupRows = []
+
+        for (const order of allOrders) {
           const profile = profilesById[order.user_id] || {}
           const status = order.status || 'Pending'
-
           const paymentStatus = status === 'Delivered' ? 'Paid' : 'Unpaid'
+          const amount = Number(order.total_amount) || 0
 
-          return {
+          const base = {
             id: order.id,
             orderNumber: order.order_number,
             status,
-            amount: Number(order.total_amount) || 0,
+            amount,
             customerName: profile.full_name || '—',
             address: profile.address || '—',
             phone: profile.phone || '—',
-            paymentMethod: 'Cash on Delivery',
-            paymentStatus,
           }
-        })
 
-        setPendingOrders(mapped)
+          if (order.fulfillment_type === 'Pickup') {
+            pickupRows.push({
+              ...base,
+              pickupSlot: order.pickup_slot || '',
+            })
+          } else {
+            const deliveryRider = order.delivery_rider || ''
+            const deliveryDistanceLabel = order.delivery_distance_label || ''
+
+            deliveryRows.push({
+              ...base,
+              paymentMethod: 'Cash on Delivery',
+              paymentStatus,
+              deliveryRider,
+              deliveryDistanceLabel,
+            })
+          }
+        }
+
+        setPendingOrders(deliveryRows)
+        setPickupOrders(pickupRows)
+
+        const activeSource = deliveryRows.find(
+          (entry) => entry.status === 'Out for delivery'
+        )
+
+        if (activeSource) {
+          setActiveDelivery({
+            status: 'In transit',
+            rider: activeSource.deliveryRider || 'Assigned rider',
+            orderId: activeSource.orderNumber || `ORD-${activeSource.id}`,
+            distance: activeSource.deliveryDistanceLabel || '',
+          })
+        } else {
+          setActiveDelivery(null)
+        }
       }
     } catch (err) {
       console.error('Unexpected error loading dashboard data', err)
@@ -201,30 +229,42 @@ function AdminDashboardPage({ onNavigate, showToast }) {
                 <h3>Personal Pickups</h3>
               </div>
               <div className="pickup-list">
-                {pickupOrders.map((order) => (
-                  <div key={order.customer} className="pickup-row">
-                    <div>
-                      <strong>{order.customer}</strong>
-                      <p>{order.status}</p>
+                {isLoading ? (
+                  <p>Loading pickup orders...</p>
+                ) : error ? (
+                  <p>{error}</p>
+                ) : pickupOrders.length === 0 ? (
+                  <p>No pickup orders at the moment.</p>
+                ) : (
+                  pickupOrders.map((order) => (
+                    <div key={order.id} className="pickup-row">
+                      <div>
+                        <strong>{order.customerName}</strong>
+                        <p>{order.status}</p>
+                      </div>
+                      <div>
+                        <span>{order.pickupSlot || 'To be scheduled'}</span>
+                        <span>{currencyFormatter.format(order.amount)}</span>
+                      </div>
                     </div>
-                    <div>
-                      <span>{order.schedule}</span>
-                      <span>{currencyFormatter.format(order.amount)}</span>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </article>
           </div>
 
           <aside className="pending-right">
             <h2>Active Delivery</h2>
-            <div className="active-card">
-              <p className="active-label">{activeDelivery.status}</p>
-              <strong>{activeDelivery.rider}</strong>
-              <p>{activeDelivery.orderId}</p>
-              <span>{activeDelivery.distance}</span>
-            </div>
+            {activeDelivery ? (
+              <div className="active-card">
+                <p className="active-label">{activeDelivery.status}</p>
+                <strong>{activeDelivery.rider}</strong>
+                <p>{activeDelivery.orderId}</p>
+                {activeDelivery.distance && <span>{activeDelivery.distance}</span>}
+              </div>
+            ) : (
+              <p>No active deliveries right now.</p>
+            )}
           </aside>
         </section>
       </div>
