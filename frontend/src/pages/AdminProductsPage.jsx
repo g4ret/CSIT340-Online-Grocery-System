@@ -376,144 +376,142 @@ function AdminProductsPage({ onNavigate, showToast }) {
           </section>
         )}
 
-        <section className="admin-products__table">
-          <header>
-            <span>Product</span>
-            <span>Category</span>
-            <span>Price</span>
-            <span>Stock</span>
-            <span>Status</span>
-            <span>Actions</span>
-          </header>
-          {filteredProducts.map((product) => {
-            const isEditing = editingProductId === product.id
-            const isBusy = updatingProductId === product.id || deletingProductId === product.id
+        <section className="admin-products__catalog">
+          <div className="product-grid">
+            {filteredProducts.map((product) => {
+              const isEditing = editingProductId === product.id
+              const isBusy =
+                updatingProductId === product.id || deletingProductId === product.id
 
-            const draftPrice = Number(isEditing ? editDraft.price || 0 : product.price || 0)
+              const draftPrice = Number(isEditing ? editDraft.price || 0 : product.price || 0)
 
-            return (
-              <article key={product.id}>
-                <div className="product-meta">
-                  <img src={product.image} alt={product.name} />
-                  <div>
+              return (
+                <article className="home-product-card admin-product-card" key={product.id}>
+                  <span className="discount-pill">
+                    {isEditing ? editDraft.badge || product.badge : product.badge}
+                  </span>
+                  <div className="product-actions">
                     {isEditing ? (
                       <>
-                        <input
-                          type="text"
-                          value={editDraft.name}
-                          onChange={(event) => handleEditFieldChange('name', event.target.value)}
-                        />
-                        <p>id #{product.id}</p>
+                        <button
+                          type="button"
+                          className="primary"
+                          onClick={() => handleSaveEdit(product.id)}
+                          disabled={isBusy}
+                        >
+                          {isBusy ? 'Saving...' : 'Save'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelEdit}
+                          disabled={isBusy}
+                        >
+                          Cancel
+                        </button>
                       </>
                     ) : (
                       <>
-                        <strong>{product.name}</strong>
-                        <p>id #{product.id}</p>
+                        <button
+                          type="button"
+                          className="edit"
+                          onClick={() => handleStartEdit(product)}
+                          disabled={isBusy}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="danger"
+                          onClick={() => handleDeleteProduct(product)}
+                          disabled={isBusy}
+                        >
+                          {deletingProductId === product.id ? 'Deleting...' : 'Delete'}
+                        </button>
                       </>
                     )}
                   </div>
-                </div>
-                <span>
+
+                  <img src={product.image} alt={product.name} loading="lazy" />
+
+                  <p className="stock-count">
+                    {isEditing ? (
+                      <>
+                        <small className="admin-edit-label">Category</small>
+                        <input
+                          type="text"
+                          value={editDraft.category}
+                          onChange={(event) =>
+                            handleEditFieldChange('category', event.target.value)
+                          }
+                        />
+                      </>
+                    ) : (
+                      product.category
+                    )}
+                  </p>
+
                   {isEditing ? (
-                    <input
-                      type="text"
-                      value={editDraft.category}
-                      onChange={(event) =>
-                        handleEditFieldChange('category', event.target.value)
-                      }
-                    />
-                  ) : (
-                    product.category
-                  )}
-                </span>
-                <div className="price-stack">
-                  {isEditing ? (
-                    <>
+                    <div className="admin-edit-field">
+                      <small className="admin-edit-label">Name</small>
                       <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={editDraft.price}
-                        onChange={(event) => handleEditFieldChange('price', event.target.value)}
+                        type="text"
+                        value={editDraft.name}
+                        onChange={(event) => handleEditFieldChange('name', event.target.value)}
                       />
-                      <small className="muted">₱{(draftPrice * 1.2).toFixed(2)}</small>
-                    </>
+                    </div>
                   ) : (
-                    <>
-                      <strong>₱{product.price.toFixed(2)}</strong>
-                      <small className="muted">₱{(product.price * 1.2).toFixed(2)}</small>
-                    </>
+                    <h3>{product.name}</h3>
                   )}
-                </div>
-                <span className="stock-pill">
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={editDraft.inventory}
-                      onChange={(event) =>
-                        handleEditFieldChange('inventory', event.target.value)
-                      }
-                    />
-                  ) : (
-                    `${product.inventory} in stock`
-                  )}
-                </span>
-                <span className="status-pill">
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editDraft.badge}
-                      onChange={(event) => handleEditFieldChange('badge', event.target.value)}
-                    />
-                  ) : (
-                    product.badge
-                  )}
-                </span>
-                <div className="actions">
-                  {isEditing ? (
-                    <>
-                      <button
-                        type="button"
-                        className="primary"
-                        onClick={() => handleSaveEdit(product.id)}
-                        disabled={isBusy}
-                      >
-                        {isBusy ? 'Saving...' : 'Save'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleCancelEdit}
-                        disabled={isBusy}
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        className="edit"
-                        onClick={() => handleStartEdit(product)}
-                        disabled={isBusy}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="danger"
-                        onClick={() => handleDeleteProduct(product)}
-                        disabled={isBusy}
-                      >
-                        {deletingProductId === product.id ? 'Deleting...' : 'Delete'}
-                      </button>
-                    </>
-                  )}
-                </div>
-              </article>
-            )
-          })}
+
+                  <div className="price-row">
+                    {isEditing ? (
+                      <>
+                        <div className="admin-edit-field">
+                          <small className="admin-edit-label">Price</small>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={editDraft.price}
+                            onChange={(event) =>
+                              handleEditFieldChange('price', event.target.value)
+                            }
+                          />
+                        </div>
+                        <span className="old-price">₱{(draftPrice * 1.2).toFixed(2)}</span>
+                      </>
+                    ) : (
+                      <>
+                        <strong>₱{product.price.toFixed(2)}</strong>
+                        <span className="old-price">
+                          ₱{(Number(product.price || 0) * 1.2).toFixed(2)}
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  <p className="stock-count">
+                    {isEditing ? (
+                      <>
+                        <small className="admin-edit-label">Stock</small>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={editDraft.inventory}
+                          onChange={(event) =>
+                            handleEditFieldChange('inventory', event.target.value)
+                          }
+                        />
+                      </>
+                    ) : (
+                      `${product.inventory} in stock`
+                    )}
+                  </p>
+                </article>
+              )
+            })}
+          </div>
         </section>
       </div>
     </main>

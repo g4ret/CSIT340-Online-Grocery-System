@@ -39,9 +39,39 @@ function CategoryPage({ onAddToCart, onNavigate, showToast, onViewProductDetails
       ? products
       : products.filter((product) => product.category === selectedCategory)
 
-  const handleLike = () => {
-    if (showToast) {
-      showToast('Added to wishlist (demo only).', 'info')
+  const handleLike = async (product) => {
+    try {
+      const { data: userResult, error: userError } = await supabase.auth.getUser()
+
+      if (userError || !userResult?.user) {
+        if (showToast) {
+          showToast('Sign in to save items to your wishlist.', 'info')
+        }
+        return
+      }
+
+      const user = userResult.user
+
+      const { error } = await supabase
+        .from('wishlists')
+        .upsert({ user_id: user.id, product_id: product.id }, { onConflict: 'user_id,product_id' })
+
+      if (error) {
+        console.error('Error adding product to wishlist', error)
+        if (showToast) {
+          showToast('Failed to update wishlist. Please try again.', 'error')
+        }
+        return
+      }
+
+      if (showToast) {
+        showToast('Added to wishlist.', 'success')
+      }
+    } catch (err) {
+      console.error('Unexpected error adding product to wishlist', err)
+      if (showToast) {
+        showToast('Failed to update wishlist. Please try again.', 'error')
+      }
     }
   }
 
@@ -75,7 +105,11 @@ function CategoryPage({ onAddToCart, onNavigate, showToast, onViewProductDetails
           <article className="home-product-card" key={product.id}>
             <span className="discount-pill">-5%</span>
             <div className="product-actions">
-              <button type="button" aria-label="favorite" onClick={handleLike}>
+              <button
+                type="button"
+                aria-label="favorite"
+                onClick={() => handleLike(product)}
+              >
                 ♡
               </button>
               <button

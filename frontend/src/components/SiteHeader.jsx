@@ -13,7 +13,6 @@ const adminNavLinks = [
   { id: 'adminProducts', label: 'Products' },
   { id: 'adminOrders', label: 'Orders' },
   { id: 'adminUsers', label: 'Users' },
-  { id: 'category', label: 'Catalog' },
 ]
 
 function SiteHeader({ activePage, onNavigate, onLogout, userRole, cartCount }) {

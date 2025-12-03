@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
 
 const demoProduct = {
   id: 999,
@@ -131,9 +132,42 @@ function ProductDetailsPage({ selectedProduct, onAddToCart, showToast }) {
     setQuantity((previous) => previous + 1)
   }
 
-  const handleWishlist = () => {
-    if (showToast) {
-      showToast('Added to wishlist (demo only).', 'info')
+  const handleWishlist = async () => {
+    try {
+      const { data: userResult, error: userError } = await supabase.auth.getUser()
+
+      if (userError || !userResult?.user) {
+        if (showToast) {
+          showToast('Sign in to save items to your wishlist.', 'info')
+        }
+        return
+      }
+
+      const user = userResult.user
+
+      const { error } = await supabase
+        .from('wishlists')
+        .upsert(
+          { user_id: user.id, product_id: currentProduct.id },
+          { onConflict: 'user_id,product_id' }
+        )
+
+      if (error) {
+        console.error('Error adding product to wishlist', error)
+        if (showToast) {
+          showToast('Failed to update wishlist. Please try again.', 'error')
+        }
+        return
+      }
+
+      if (showToast) {
+        showToast('Added to wishlist.', 'success')
+      }
+    } catch (err) {
+      console.error('Unexpected error adding product to wishlist', err)
+      if (showToast) {
+        showToast('Failed to update wishlist. Please try again.', 'error')
+      }
     }
   }
 

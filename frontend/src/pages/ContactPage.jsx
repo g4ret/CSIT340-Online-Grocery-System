@@ -1,3 +1,6 @@
+import { useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
+
 const contactChannels = [
   {
     label: 'Customer Support',
@@ -34,7 +37,67 @@ const faqs = [
   },
 ]
 
-function ContactPage() {
+function ContactPage({ showToast }) {
+  const [fullName, setFullName] = useState('')
+  const [email, setEmail] = useState('')
+  const [topic, setTopic] = useState('Order concern')
+  const [message, setMessage] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+
+    if (!fullName.trim() || !email.trim() || !message.trim()) {
+      if (showToast) {
+        showToast('Please fill in your name, email, and message.', 'info')
+      }
+      return
+    }
+
+    if (isSubmitting) return
+
+    setIsSubmitting(true)
+
+    try {
+      const { data: userResult } = await supabase.auth.getUser()
+      const user = userResult?.user || null
+
+      const payload = {
+        full_name: fullName.trim(),
+        email: email.trim(),
+        topic: topic || 'Order concern',
+        message: message.trim(),
+        user_id: user ? user.id : null,
+      }
+
+      const { error } = await supabase.from('support_requests').insert(payload)
+
+      if (error) {
+        console.error('Error submitting support request', error)
+        if (showToast) {
+          showToast('Failed to submit your request. Please try again.', 'error')
+        }
+        return
+      }
+
+      if (showToast) {
+        showToast('Your request has been submitted. We will get back to you soon.', 'success')
+      }
+
+      setFullName('')
+      setEmail('')
+      setTopic('Order concern')
+      setMessage('')
+    } catch (err) {
+      console.error('Unexpected error submitting support request', err)
+      if (showToast) {
+        showToast('Failed to submit your request. Please try again.', 'error')
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <main className="contact-page">
       <div className="contact-shell">
@@ -63,30 +126,52 @@ function ContactPage() {
           <div className="contact-form-card">
             <h2>Send us a message</h2>
             <p>Leave your details and we’ll get back to you within 24 hours.</p>
-            <form className="contact-form">
+            <form className="contact-form" onSubmit={handleSubmit}>
               <div className="form-row">
                 <label htmlFor="contact-name">Full Name</label>
-                <input id="contact-name" type="text" placeholder="Claudine Margaret" />
+                <input
+                  id="contact-name"
+                  type="text"
+                  placeholder="Claudine Margaret"
+                  value={fullName}
+                  onChange={(event) => setFullName(event.target.value)}
+                />
               </div>
               <div className="form-row">
                 <label htmlFor="contact-email">Email Address</label>
-                <input id="contact-email" type="email" placeholder="you@email.com" />
+                <input
+                  id="contact-email"
+                  type="email"
+                  placeholder="you@email.com"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                />
               </div>
               <div className="form-row">
                 <label htmlFor="contact-topic">Topic</label>
-                <select id="contact-topic">
-                  <option>Order concern</option>
-                  <option>Delivery & logistics</option>
-                  <option>Payment & refund</option>
-                  <option>Partnership</option>
+                <select
+                  id="contact-topic"
+                  value={topic}
+                  onChange={(event) => setTopic(event.target.value)}
+                >
+                  <option value="Order concern">Order concern</option>
+                  <option value="Delivery & logistics">Delivery & logistics</option>
+                  <option value="Payment & refund">Payment & refund</option>
+                  <option value="Partnership">Partnership</option>
                 </select>
               </div>
               <div className="form-row">
                 <label htmlFor="contact-message">Message</label>
-                <textarea id="contact-message" rows={4} placeholder="Tell us more about your concern..." />
+                <textarea
+                  id="contact-message"
+                  rows={4}
+                  placeholder="Tell us more about your concern..."
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                />
               </div>
-              <button type="button" className="primary-btn">
-                Submit request
+              <button type="submit" className="primary-btn" disabled={isSubmitting}>
+                {isSubmitting ? 'Submitting...' : 'Submit request'}
               </button>
             </form>
           </div>

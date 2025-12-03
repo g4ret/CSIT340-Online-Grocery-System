@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabaseClient'
 
 function AddToCartPage({
   cartItems = [],
@@ -71,19 +72,61 @@ function AddToCartPage({
     }
   }
 
-  const handleBulkMoveToLikes = () => {
+  const handleBulkMoveToLikes = async () => {
     if (!selectedIds.length) {
       if (showToast) {
         showToast('Select items to move first.', 'info')
       }
       return
     }
+    try {
+      const { data: userResult, error: userError } = await supabase.auth.getUser()
 
-    if (onRemoveCartItems) {
-      onRemoveCartItems(selectedIds)
-    }
-    if (showToast) {
-      showToast('Selected items moved to likes (demo only).', 'success')
+      if (userError || !userResult?.user) {
+        if (showToast) {
+          showToast('Sign in to use your wishlist.', 'info')
+        }
+        return
+      }
+
+      const user = userResult.user
+      const productsToMove = cartItems.filter((item) => selectedIds.includes(item.productId))
+
+      if (!productsToMove.length) {
+        if (showToast) {
+          showToast('Selected items are no longer in your cart.', 'info')
+        }
+        return
+      }
+
+      const payload = productsToMove.map((entry) => ({
+        user_id: user.id,
+        product_id: entry.productId,
+      }))
+
+      const { error } = await supabase
+        .from('wishlists')
+        .upsert(payload, { onConflict: 'user_id,product_id' })
+
+      if (error) {
+        console.error('Error moving items to wishlist', error)
+        if (showToast) {
+          showToast('Failed to move items to wishlist. Please try again.', 'error')
+        }
+        return
+      }
+
+      if (onRemoveCartItems) {
+        onRemoveCartItems(selectedIds)
+      }
+      if (showToast) {
+        showToast('Selected items moved to wishlist.', 'success')
+      }
+    } catch (err) {
+      console.error('Unexpected error moving items to wishlist', err)
+      if (showToast) {
+        showToast('Failed to move items to wishlist. Please try again.', 'error')
+      }
     }
   }
 

@@ -215,40 +215,6 @@ function OrdersPage() {
           </ul>
         </article>
       </section>
-
-      <section className="order-history-section">
-        <article className="order-history">
-          <h3>Your order history</h3>
-          {isLoading ? (
-            <p>Loading your orders...</p>
-          ) : orders.length === 0 ? (
-            <p>You haven't placed any orders yet.</p>
-          ) : (
-            <table className="order-history__table">
-              <thead>
-                <tr>
-                  <th>Order No.</th>
-                  <th>Date</th>
-                  <th>Items</th>
-                  <th>Total</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id}>
-                    <td>{order.order_number}</td>
-                    <td>{order.created_at ? new Date(order.created_at).toLocaleString() : '—'}</td>
-                    <td>{order.total_items}</td>
-                    <td>₱{formatCurrency(order.total_amount)}</td>
-                    <td>{order.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </article>
-      </section>
     </main>
   )
 }

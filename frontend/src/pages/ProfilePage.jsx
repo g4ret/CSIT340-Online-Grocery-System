@@ -33,55 +33,6 @@ const profileInfo = {
   address: '12A Mango St., Quezon City, Metro Manila',
 }
 
-const orders = [
-  {
-    id: 'UGREEN-001',
-    store: 'Ugreen Flagship Store',
-    isMall: true,
-    status: 'COMPLETED',
-    logisticsNote: 'Parcel has been delivered',
-    total: '₱219',
-    storeActions: ['Chat', 'View Shop'],
-    actions: ['Buy Again', 'Contact Seller'],
-    items: [
-      {
-        name: 'UGREEN 100W USB C to C Cable for iPhone 15 Pro Max PD Fast Charging Charger',
-        variation: 'Variation: USB C 1M',
-        price: '₱249',
-        crossedPrice: '₱699',
-        quantity: 1,
-        thumbnail: '/assets/products/ugreen-cable.png',
-      },
-    ],
-  },
-  {
-    id: 'THREADS-002',
-    store: 'Insta Threads PH',
-    isMall: false,
-    status: 'COMPLETED',
-    logisticsNote: 'Parcel has been delivered',
-    total: '₱700',
-    storeActions: ['Chat', 'View Shop'],
-    actions: ['Buy Again', 'Contact Seller'],
-    items: [
-      {
-        name: 'INSTA THREAD PlainCrop PROCLUB T-Shirt for Men and Women',
-        variation: 'Variation: BLACK, XXL',
-        price: '₱175',
-        quantity: 2,
-        thumbnail: '/assets/products/insta-thread-black.png',
-      },
-      {
-        name: 'INSTA THREAD PlainCrop PROCLUB T-Shirt for Men and Women',
-        variation: 'Variation: WHITE, XXL',
-        price: '₱175',
-        quantity: 2,
-        thumbnail: '/assets/products/insta-thread-white.png',
-      },
-    ],
-  },
-]
-
 function ProfilePage({ showToast }) {
   const [activeView, setActiveView] = useState('purchase')
   const [profileData, setProfileData] = useState({
@@ -95,6 +46,12 @@ function ProfilePage({ showToast }) {
   })
   const [isLoadingProfile, setIsLoadingProfile] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [orders, setOrders] = useState([])
+  const [orderItemsByOrderId, setOrderItemsByOrderId] = useState({})
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false)
+  const [ordersError, setOrdersError] = useState(null)
+  const [activeOrderTab, setActiveOrderTab] = useState('All')
+  const [orderSearch, setOrderSearch] = useState('')
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -138,6 +95,114 @@ function ProfilePage({ showToast }) {
 
     loadProfile()
   }, [])
+
+  useEffect(() => {
+    const loadOrders = async () => {
+      setIsLoadingOrders(true)
+      setOrdersError(null)
+
+      try {
+        const { data: userResult, error: userError } = await supabase.auth.getUser()
+
+        if (userError || !userResult?.user) {
+          setOrders([])
+          setOrderItemsByOrderId({})
+          setIsLoadingOrders(false)
+          return
+        }
+
+        const user = userResult.user
+
+        const { data: ordersData, error: ordersError } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+
+        if (ordersError) {
+          console.error('Error loading orders for profile page', ordersError)
+          setOrdersError('Failed to load your orders.')
+          setOrders([])
+          setOrderItemsByOrderId({})
+          return
+        }
+
+        const nextOrders = ordersData || []
+        setOrders(nextOrders)
+
+        if (!nextOrders.length) {
+          setOrderItemsByOrderId({})
+          return
+        }
+
+        const orderIds = nextOrders.map((order) => order.id)
+
+        const { data: itemsData, error: itemsError } = await supabase
+          .from('order_items')
+          .select('*')
+          .in('order_id', orderIds)
+
+        if (itemsError) {
+          console.error('Error loading order items for profile page', itemsError)
+          setOrdersError('Failed to load order items.')
+          setOrderItemsByOrderId({})
+          return
+        }
+
+        const grouped = {}
+        for (const item of itemsData || []) {
+          const key = item.order_id
+          if (!grouped[key]) {
+            grouped[key] = []
+          }
+          grouped[key].push(item)
+        }
+
+        setOrderItemsByOrderId(grouped)
+      } catch (err) {
+        console.error('Unexpected error loading orders for profile page', err)
+        setOrdersError('Failed to load your orders.')
+        setOrders([])
+        setOrderItemsByOrderId({})
+      } finally {
+        setIsLoadingOrders(false)
+      }
+    }
+
+    loadOrders()
+  }, [])
+
+  const formatCurrency = (value) => {
+    const numeric = typeof value === 'number' ? value : Number(value)
+    if (!Number.isFinite(numeric)) return '0.00'
+    return numeric.toFixed(2)
+  }
+
+  const getOrderLogisticsNote = (status) => {
+    const normalized = (status || '').toLowerCase()
+
+    if (normalized === 'pending') return 'Order received and being prepared.'
+    if (normalized === 'packed') return 'Items are packed and ready for dispatch.'
+    if (normalized === 'out for delivery') return 'Rider is on the way.'
+    if (normalized === 'delivered') return 'Parcel has been delivered.'
+    if (normalized === 'cancelled') return 'Order was cancelled.'
+
+    return 'Order status update in progress.'
+  }
+
+  const shouldIncludeOrderInTab = (tab, status) => {
+    const normalized = (status || '').toLowerCase()
+
+    if (tab === 'All') return true
+    if (tab === 'To Pay') return normalized === 'pending'
+    if (tab === 'To Ship') return normalized === 'packed'
+    if (tab === 'To Receive') return normalized === 'out for delivery'
+    if (tab === 'Completed') return normalized === 'delivered'
+    if (tab === 'Cancelled') return normalized === 'cancelled'
+    if (tab === 'Return Refund') return false
+
+    return true
+  }
 
   const handleFieldChange = (field, value) => {
     setProfileData((previous) => ({ ...previous, [field]: value }))
@@ -332,111 +397,160 @@ function ProfilePage({ showToast }) {
     </section>
   )
 
-  const renderOrders = () => (
-    <section className="profile-orders">
-      <header className="orders-header">
-        <h1>My Purchase</h1>
-        <div className="order-tabs">
-          {orderTabs.map((tab, index) => (
-            <button
-              key={tab}
-              type="button"
-              className={`order-tab ${index === 0 ? 'active' : ''}`}
-            >
-              {tab}
-            </button>
-          ))}
+  const renderOrders = () => {
+    const searchTerm = orderSearch.trim().toLowerCase()
+
+    const filteredOrders = orders.filter((order) => {
+      if (!shouldIncludeOrderInTab(activeOrderTab, order.status)) {
+        return false
+      }
+
+      if (!searchTerm) {
+        return true
+      }
+
+      const orderNumber = (order.order_number || '').toLowerCase()
+      if (orderNumber.includes(searchTerm)) {
+        return true
+      }
+
+      const items = orderItemsByOrderId[order.id] || []
+      const hasMatchingItem = items.some((item) =>
+        (item.product_name || '').toLowerCase().includes(searchTerm)
+      )
+
+      return hasMatchingItem
+    })
+
+    return (
+      <section className="profile-orders">
+        <header className="orders-header">
+          <h1>My Purchase</h1>
+          <div className="order-tabs">
+            {orderTabs.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={`order-tab ${activeOrderTab === tab ? 'active' : ''}`}
+                onClick={() => setActiveOrderTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </header>
+
+        <div className="order-search">
+          <input
+            type="search"
+            placeholder="You can search by Seller Name, Order ID or Product name"
+            value={orderSearch}
+            onChange={(event) => setOrderSearch(event.target.value)}
+          />
         </div>
-      </header>
 
-      <div className="order-search">
-        <input type="search" placeholder="You can search by Seller Name, Order ID or Product name" />
-      </div>
+        <div className="order-list">
+          {isLoadingOrders ? (
+            <p>Loading your orders...</p>
+          ) : ordersError ? (
+            <p>{ordersError}</p>
+          ) : filteredOrders.length === 0 ? (
+            <p>You haven't placed any orders yet.</p>
+          ) : (
+            filteredOrders.map((order) => {
+              const items = orderItemsByOrderId[order.id] || []
+              const totalAmount = Number(order.total_amount) || 0
+              const orderTotalLabel = `\u20b1${formatCurrency(totalAmount)}`
+              const logisticsNote = getOrderLogisticsNote(order.status)
 
-      <div className="order-list">
-        {orders.map((order) => (
-          <article key={order.id} className="order-card">
-            <header className="order-card__header">
-              <div className="store-meta">
-                <p className="store-name">
-                  {order.isMall && <span className="mall-badge">Mall</span>}
-                  {order.store}
-                </p>
-                <div className="store-actions">
-                  {order.storeActions.map((storeAction) => (
-                    <button
-                      key={storeAction}
-                      type="button"
-                      className="store-action"
-                      onClick={() =>
-                        showToast &&
-                        showToast('Store interactions are not implemented in this demo.', 'info')
-                      }
-                    >
-                      {storeAction}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="status-meta">
-                <span className="delivery-note">{order.logisticsNote}</span>
-                <span className="order-status">{order.status}</span>
-              </div>
-            </header>
-
-            <div className="order-items">
-              {order.items.map((item, idx) => (
-                <div key={item.name + idx} className="order-item">
-                  <div className="item-info">
-                    <div className="item-thumb" aria-hidden="true">
-                      <span>{item.thumbnail ? '🛒' : '📦'}</span>
+              return (
+                <article key={order.id} className="order-card">
+                  <header className="order-card__header">
+                    <div className="store-meta">
+                      <p className="store-name">LazShoppe</p>
+                      <div className="store-actions">
+                        {['Chat', 'View Shop'].map((storeAction) => (
+                          <button
+                            key={storeAction}
+                            type="button"
+                            className="store-action"
+                            onClick={() =>
+                              showToast &&
+                              showToast(
+                                'Store interactions are not implemented in this demo.',
+                                'info'
+                              )
+                            }
+                          >
+                            {storeAction}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <div>
-                      <p className="item-name">{item.name}</p>
-                      <p className="item-variation">
-                        {item.variation} &middot; Qty {item.quantity}
-                      </p>
+                    <div className="status-meta">
+                      <span className="delivery-note">{logisticsNote}</span>
+                      <span className="order-status">{order.status || 'Pending'}</span>
                     </div>
-                  </div>
-                  <div className="item-price">
-                    {item.crossedPrice && <span className="crossed">{item.crossedPrice}</span>}
-                    <span>{item.price}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  </header>
 
-            <footer className="order-card__footer">
-              <div className="order-total">
-                Order Total:&nbsp;<strong>{order.total}</strong>
-              </div>
-              <div className="order-actions">
-                {order.actions.map((action) => (
-                  <button
-                    key={action}
-                    type="button"
-                    className={`order-action ${action === 'Buy Again' ? 'primary' : 'ghost'}`}
-                    onClick={() =>
-                      showToast &&
-                      showToast(
-                        action === 'Buy Again'
-                          ? 'Reordering is not implemented in this demo.'
-                          : 'Contact Seller is not implemented in this demo.',
-                        'info'
-                      )
-                    }
-                  >
-                    {action}
-                  </button>
-                ))}
-              </div>
-            </footer>
-          </article>
-        ))}
-      </div>
-    </section>
+                  <div className="order-items">
+                    {items.length === 0 ? (
+                      <p className="order-empty-items">No line items found for this order.</p>
+                    ) : (
+                      items.map((item) => (
+                        <div key={item.id} className="order-item">
+                          <div className="item-info">
+                            <div className="item-thumb" aria-hidden="true">
+                              <span>🛒</span>
+                            </div>
+                            <div>
+                              <p className="item-name">{item.product_name}</p>
+                              <p className="item-variation">Qty {item.quantity}</p>
+                            </div>
+                          </div>
+                          <div className="item-price">
+                            <span>\u20b1{formatCurrency(item.unit_price)}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
 
-  )
+                  <footer className="order-card__footer">
+                    <div className="order-total">
+                      Order Total:&nbsp;<strong>{orderTotalLabel}</strong>
+                    </div>
+                    <div className="order-actions">
+                      {['Buy Again', 'Contact Seller'].map((action) => (
+                        <button
+                          key={action}
+                          type="button"
+                          className={`order-action ${
+                            action === 'Buy Again' ? 'primary' : 'ghost'
+                          }`}
+                          onClick={() =>
+                            showToast &&
+                            showToast(
+                              action === 'Buy Again'
+                                ? 'Reordering is not implemented in this demo.'
+                                : 'Contact Seller is not implemented in this demo.',
+                              'info'
+                            )
+                          }
+                        >
+                          {action}
+                        </button>
+                      ))}
+                    </div>
+                  </footer>
+                </article>
+              )
+            })
+          )}
+        </div>
+      </section>
+    )
+  }
 
   return (
     <main className="profile-page shopee-template">
