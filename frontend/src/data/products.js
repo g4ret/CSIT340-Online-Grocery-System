@@ -71,6 +71,126 @@ const products = [
     image:
       'https://images.unsplash.com/photo-1481391032119-d89fee407e44?auto=format&fit=crop&w=600&q=60',
   },
+  {
+    id: 7,
+    name: 'Heirloom Tomatoes',
+    description: 'Juicy heirloom tomatoes perfect for salads and sandwiches.',
+    price: 55,
+    unit: 'kg',
+    badge: 'Fresh',
+    inventory: 42,
+    category: 'Pantry Essentials',
+    image:
+      'https://images.unsplash.com/photo-1506806732259-39c2d0268443?auto=format&fit=crop&w=600&q=60',
+  },
+  {
+    id: 8,
+    name: 'Baby Spinach',
+    description: 'Crisp baby spinach leaves, washed and ready to cook.',
+    price: 48,
+    unit: 'bag',
+    badge: 'Hot',
+    inventory: 58,
+    category: 'Pantry Essentials',
+    image:
+      'https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format&fit=crop&w=600&q=60',
+  },
+  {
+    id: 9,
+    name: 'Greek Yogurt',
+    description: 'Thick and creamy yogurt with live cultures, lightly sweetened.',
+    price: 95,
+    unit: 'tub',
+    badge: 'Best Seller',
+    inventory: 63,
+    category: 'Bakery & Dairy',
+    image:
+      'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&w=600&q=60',
+  },
+  {
+    id: 10,
+    name: 'Free-Range Eggs',
+    description: 'A dozen large, free-range eggs from local farms.',
+    price: 110,
+    unit: 'dozen',
+    badge: 'Fresh',
+    inventory: 77,
+    category: 'Bakery & Dairy',
+    image:
+      'https://images.unsplash.com/photo-1498654896293-37aacf113fd9?auto=format&fit=crop&w=600&q=60',
+  },
+  {
+    id: 11,
+    name: 'Salmon Fillet',
+    description: 'Skin-on Atlantic salmon fillet, sashimi grade.',
+    price: 420,
+    unit: 'kg',
+    badge: 'Limited',
+    inventory: 18,
+    category: 'Lifestyle Cooking',
+    image:
+      'https://images.unsplash.com/photo-1612874472278-5c1f9c1e10c5?auto=format&fit=crop&w=600&q=60',
+  },
+  {
+    id: 12,
+    name: 'Skinless Chicken Breast',
+    description: 'Lean chicken breast, trimmed and ready to cook.',
+    price: 230,
+    unit: 'kg',
+    badge: 'Value Pack',
+    inventory: 90,
+    category: 'Lifestyle Cooking',
+    image:
+      'https://images.unsplash.com/photo-1604908177520-4729fb3cfd97?auto=format&fit=crop&w=600&q=60',
+  },
+  {
+    id: 13,
+    name: 'Brown Rice',
+    description: 'Whole grain brown rice for hearty, fiber-rich meals.',
+    price: 85,
+    unit: 'kg',
+    badge: 'Staple',
+    inventory: 120,
+    category: 'Pantry Essentials',
+    image:
+      'https://images.unsplash.com/photo-1604908177754-2be040f70ab8?auto=format&fit=crop&w=600&q=60',
+  },
+  {
+    id: 14,
+    name: 'Almond Milk',
+    description: 'Unsweetened almond milk, lactose-free and vegan.',
+    price: 120,
+    unit: 'liter',
+    badge: 'Vegan',
+    inventory: 44,
+    category: 'Bakery & Dairy',
+    image:
+      'https://images.unsplash.com/photo-1580894732444-8ecded7900cd?auto=format&fit=crop&w=600&q=60',
+  },
+  {
+    id: 15,
+    name: 'Dark Chocolate Bar',
+    description: '70% cocoa dark chocolate with a smooth finish.',
+    price: 95,
+    unit: 'bar',
+    badge: 'Treat',
+    inventory: 70,
+    category: 'Lifestyle Cooking',
+    image:
+      'https://images.unsplash.com/photo-1499636136210-6f4ee915583e?auto=format&fit=crop&w=600&q=60',
+  },
+  {
+    id: 16,
+    name: 'Avocados',
+    description: 'Creamy Hass avocados, ready to slice and serve.',
+    price: 75,
+    unit: 'piece',
+    badge: 'Fresh',
+    inventory: 52,
+    category: 'Pantry Essentials',
+    image:
+      'https://images.unsplash.com/photo-1495202337139-30f8e2f1c1e9?auto=format&fit=crop&w=600&q=60',
+  },
 ]
 
 export default products

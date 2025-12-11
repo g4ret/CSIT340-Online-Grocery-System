@@ -42,37 +42,41 @@ function ProfilePage({ showToast, userId, userEmail }) {
       try {
         const { data: userResult } = await supabase.auth.getUser()
         const supabaseUser = userResult?.user
+        const userIdentifier = supabaseUser?.id || userId
         const fallbackEmail = userEmail || profileData.email
 
-        if (!supabaseUser) {
-          setProfileData((previous) => ({
-            ...previous,
-            email: fallbackEmail,
-          }))
-          setIsLoadingProfile(false)
-          return
+        let profileRow = null
+
+        if (userIdentifier) {
+          const { data: profileDataRow, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userIdentifier)
+            .maybeSingle()
+
+          if (profileError) {
+            console.error('Error loading profile from Supabase', profileError)
+          } else {
+            profileRow = profileDataRow
+          }
         }
 
-        const user = supabaseUser
-
-        const { data: profileRow, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle()
-
-        if (profileError) {
-          console.error('Error loading profile from Supabase', profileError)
-        }
+        const activeEmail = supabaseUser?.email || fallbackEmail
+        const activeName =
+          profileRow?.full_name || supabaseUser?.user_metadata?.full_name || profileData.name
+        const activePhone = profileRow?.phone || supabaseUser?.user_metadata?.phone || profileData.phone
+        const activeAddress = profileRow?.address || profileData.address
+        const activeUsername = supabaseUser?.user_metadata?.username || profileData.username
+        const activeBirthDate = profileRow?.birth_date || profileData.birthDate
 
         setProfileData((previous) => ({
           ...previous,
-          username: user.user_metadata?.username || previous.username,
-          name: profileRow?.full_name || user.user_metadata?.full_name || previous.name,
-          email: user.email || fallbackEmail || previous.email,
-          phone: profileRow?.phone || user.user_metadata?.phone || previous.phone,
-          birthDate: profileRow?.birth_date || previous.birthDate,
-          address: profileRow?.address || previous.address,
+          username: activeUsername || previous.username,
+          name: activeName || previous.name,
+          email: activeEmail || previous.email,
+          phone: activePhone || previous.phone,
+          birthDate: activeBirthDate || previous.birthDate,
+          address: activeAddress || previous.address,
         }))
       } catch (err) {
         console.error('Unexpected error loading profile from Supabase', err)

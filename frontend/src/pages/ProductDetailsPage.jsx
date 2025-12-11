@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import productsDataset from '../data/products'
 
 const demoProduct = {
   id: 999,
@@ -74,11 +75,32 @@ const relatedProducts = [
 
 function ProductDetailsPage({ selectedProduct, onAddToCart, showToast }) {
   const [quantity, setQuantity] = useState(1)
+  const [activeVariant, setActiveVariant] = useState(
+    (selectedProduct?.variants || demoProduct.variants)[0]?.id || 'default'
+  )
+  const [activeSize, setActiveSize] = useState((selectedProduct?.sizes || demoProduct.sizes)[0] || '1')
 
-  const currentProduct = {
-    ...demoProduct,
-    ...(selectedProduct || {}),
-  }
+  const currentProduct = useMemo(() => {
+    if (selectedProduct) return { ...demoProduct, ...selectedProduct }
+    if (productsDataset.length) return { ...demoProduct, ...productsDataset[0] }
+    return demoProduct
+  }, [selectedProduct])
+
+  const relatedProducts = useMemo(() => {
+    const pool =
+      productsDataset.filter((p) => p.id !== currentProduct.id && p.category === currentProduct.category) ||
+      productsDataset
+    return pool.slice(0, 6).map((item) => ({
+      id: item.id,
+      name: item.name,
+      priceLabel: `₱${item.price.toFixed(2)}`,
+      priceValue: item.price,
+      oldPrice: `₱${(item.price * 1.08).toFixed(2)}`,
+      discount: '-5%',
+      qtyLabel: item.unit || '',
+      image: item.image,
+    }))
+  }, [currentProduct.id, currentProduct.category])
 
   const basePrice = typeof currentProduct.price === 'number' ? currentProduct.price : 285
   const packPriceLabel = `₱${basePrice.toFixed(2)}`
@@ -171,9 +193,13 @@ function ProductDetailsPage({ selectedProduct, onAddToCart, showToast }) {
     }
   }
 
-  const handleShare = () => {
-    if (showToast) {
-      showToast('Share link copied (demo only).', 'info')
+  const handleShare = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href)
+      showToast?.('Share link copied.', 'success')
+    } catch (err) {
+      showToast?.('Share this link: copied placeholder.', 'info')
+      console.error('Share copy failed', err)
     }
   }
   return (
@@ -208,11 +234,11 @@ function ProductDetailsPage({ selectedProduct, onAddToCart, showToast }) {
                     <button
                       key={variant.id}
                       type="button"
-                      className="variant-swatch"
+                      className={`variant-swatch ${activeVariant === variant.id ? 'active' : ''}`}
                       style={{ backgroundColor: variant.color }}
-                    >
-                      <span className="sr-only">{variant.label}</span>
-                    </button>
+                      onClick={() => setActiveVariant(variant.id)}
+                      aria-label={variant.label}
+                    />
                   ))}
                 </div>
               </div>
@@ -220,8 +246,13 @@ function ProductDetailsPage({ selectedProduct, onAddToCart, showToast }) {
               <div>
                 <span>Size:</span>
                 <div className="size-selector">
-                  {(currentProduct.sizes || demoProduct.sizes).map((size, idx) => (
-                    <button key={size} type="button" className={`size-pill ${idx === 0 ? 'active' : ''}`}>
+                  {(currentProduct.sizes || demoProduct.sizes).map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      className={`size-pill ${activeSize === size ? 'active' : ''}`}
+                      onClick={() => setActiveSize(size)}
+                    >
                       {size}
                     </button>
                   ))}
@@ -232,7 +263,7 @@ function ProductDetailsPage({ selectedProduct, onAddToCart, showToast }) {
             <div className="product-featured-price">{featuredPriceLabel}</div>
 
             <div className="product-quantity">
-              <button type="button" aria-label="Decrease quantity" onClick={handleDecrement}>
+              <button type="button" aria-label="Decrease quantity" onClick={handleDecrement} disabled={quantity === 1}>
                 -
               </button>
               <span>{quantity}</span>
@@ -257,6 +288,7 @@ function ProductDetailsPage({ selectedProduct, onAddToCart, showToast }) {
                 ⤴
               </button>
             </div>
+            {currentProduct.description && <p className="product-description">{currentProduct.description}</p>}
           </div>
         </section>
 

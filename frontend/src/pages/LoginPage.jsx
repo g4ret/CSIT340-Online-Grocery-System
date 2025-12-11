@@ -46,6 +46,12 @@ function LoginPage({ onNavigate, onLogin }) {
           <p>Sign in to your account to continue shopping</p>
         </div>
 
+        <div className="auth-badges">
+          <span className="pill gradient">Customer Portal</span>
+          <span className="pill ghost">🔒 Secure login</span>
+          <span className="pill ghost">⚡ Fast checkout</span>
+        </div>
+
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="email">Email Address</label>

@@ -17,19 +17,20 @@ function CheckoutPage({
       setIsLoadingProfile(true)
 
       try {
-        const { data: userResult, error: userError } = await supabase.auth.getUser()
+        const { data: userResult } = await supabase.auth.getUser()
+        const supaUser = userResult?.user
+        const fallbackUser = userId ? { id: userId, email: userEmail || '' } : null
+        const activeUser = supaUser || fallbackUser
 
-        if (userError || !userResult?.user) {
+        if (!activeUser) {
           setIsLoadingProfile(false)
           return
         }
 
-        const user = userResult.user
-
         const { data: profileRow, error: profileError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', user.id)
+          .eq('id', activeUser.id)
           .maybeSingle()
 
         if (profileError) {
@@ -38,14 +39,14 @@ function CheckoutPage({
 
         if (profileRow) {
           setProfileAddress({
-            name: profileRow.full_name || user.user_metadata?.full_name || user.email,
-            phone: profileRow.phone || user.user_metadata?.phone || '',
+            name: profileRow.full_name || supaUser?.user_metadata?.full_name || activeUser.email,
+            phone: profileRow.phone || supaUser?.user_metadata?.phone || '',
             address: profileRow.address || '',
           })
         } else {
           setProfileAddress({
-            name: user.user_metadata?.full_name || user.email,
-            phone: user.user_metadata?.phone || '',
+            name: supaUser?.user_metadata?.full_name || activeUser.email,
+            phone: supaUser?.user_metadata?.phone || '',
             address: '',
           })
         }
@@ -217,9 +218,6 @@ function CheckoutPage({
         <div className="products-card">
           <h3>Products Ordered</h3>
           <article className="merchant-block">
-            <div className="merchant-title">
-              Insta Threads PH <button className="link-btn subtle">Chat now</button>
-            </div>
             {checkoutItems.map((item) => {
               const product = item.product
 
