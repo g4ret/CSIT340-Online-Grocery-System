@@ -1,77 +1,69 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
-const trackingSteps = [
-  {
-    title: 'Order Confirmation',
-    detail: 'Email and SMS confirmations sent to the customer.',
-    time: '10:14 AM',
-    status: 'done',
-  },
-  {
-    title: 'Packed',
-    detail: 'Personal shopper prepares the basket and verifies quantities.',
-    time: '11:02 AM',
-    status: 'done',
-  },
-  {
-    title: 'Out for Delivery',
-    detail: 'Courier picked up the package and is en route.',
-    time: '12:30 PM',
-    status: 'active',
-  },
-  {
-    title: 'Delivered',
-    detail: 'Awaiting customer confirmation and rating.',
-    status: 'pending',
-  },
-]
-
-const profileActions = [
-  'Update addresses and delivery instructions',
-  'Store multiple payment methods securely',
-  'Review past orders & reorder favourites',
-  'Adjust notification preferences',
-]
-
-function OrdersPage() {
-  const [latestOrder, setLatestOrder] = useState(null)
+function OrdersPage({ userId, userEmail }) {
   const [orders, setOrders] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [profileAddress, setProfileAddress] = useState(null)
+  const [cancellingId, setCancellingId] = useState(null)
+
+  const persistLocalOrders = (nextOrders) => {
+    try {
+      localStorage.setItem('ordersLocal', JSON.stringify(nextOrders.slice(0, 50)))
+    } catch (err) {
+      console.error('Error saving orders to local cache', err)
+    }
+  }
 
   useEffect(() => {
     const loadLatestOrder = async () => {
       setIsLoading(true)
       setError(null)
 
-      const { data: userResult, error: userError } = await supabase.auth.getUser()
-
-      if (userError || !userResult?.user) {
-        setLatestOrder(null)
-        setIsLoading(false)
-        return
-      }
-
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('user_id', userResult.user.id)
-        .order('created_at', { ascending: false })
-
-      if (ordersError) {
-        console.error('Error loading orders from Supabase', ordersError)
-        setError('Failed to load your orders.')
-        setLatestOrder(null)
-        setOrders([])
-      } else {
-        setOrders(ordersData || [])
-        setLatestOrder(ordersData?.[0] || null)
-      }
+      const storedId = typeof localStorage !== 'undefined' ? localStorage.getItem('userId') : null
 
       try {
-        const user = userResult.user
+        const { data: userResult } = await supabase.auth.getUser()
+        const supabaseUser = userResult?.user
+        const userIdentifier = supabaseUser?.id || userId || storedId
+
+        if (!userIdentifier) {
+          setOrders([])
+          setError('Please sign in to view your orders.')
+          setIsLoading(false)
+          return
+        }
+
+        const { data: ordersData, error: ordersError } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('user_id', userIdentifier)
+          .order('created_at', { ascending: false })
+
+        if (ordersError) {
+          console.error('Error loading orders from Supabase', ordersError)
+          setError('Failed to load your orders.')
+          setOrders([])
+        } else if (ordersData && ordersData.length) {
+          setOrders(ordersData)
+          persistLocalOrders(ordersData)
+        } else {
+          // Fallback to local cached orders if Supabase has none (demo)
+          try {
+            const cached = JSON.parse(localStorage.getItem('ordersLocal') || '[]')
+            const filtered =
+              Array.isArray(cached) && cached.length
+                ? cached.filter((o) => o.user_id === userIdentifier)
+                : []
+            setOrders(filtered)
+          } catch (err) {
+            console.error('Error reading local order cache', err)
+            setOrders([])
+          }
+        }
+
+        const user = supabaseUser || { id: userIdentifier, email: userEmail || '' }
 
         const { data: profileRow, error: profileError } = await supabase
           .from('profiles')
@@ -97,14 +89,28 @@ function OrdersPage() {
           })
         }
       } catch (err) {
-        console.error('Unexpected error loading profile for orders page', err)
+        console.error('Unexpected error loading orders page', err)
+        try {
+          const cached = JSON.parse(localStorage.getItem('ordersLocal') || '[]')
+          const filtered =
+            Array.isArray(cached) && cached.length
+              ? cached.filter((o) => o.user_id === userId || o.user_id === storedId)
+              : []
+          setOrders(filtered)
+          if (!filtered.length) {
+            setError('Please sign in to view your orders.')
+          }
+        } catch (fallbackErr) {
+          console.error('Fallback local orders failed', fallbackErr)
+          setError('Please sign in to view your orders.')
+        }
+      } finally {
+        setIsLoading(false)
       }
-
-      setIsLoading(false)
     }
 
     loadLatestOrder()
-  }, [])
+  }, [userId, userEmail])
 
   const formatCurrency = (value) => {
     const numeric = typeof value === 'number' ? value : Number(value)
@@ -112,109 +118,117 @@ function OrdersPage() {
     return numeric.toFixed(2)
   }
 
-  const orderNumber = latestOrder?.order_number || '#No-orders-yet'
-  const paymentAmount = latestOrder ? formatCurrency(latestOrder.total_amount) : '0.00'
-  const eta = latestOrder ? 'Today, 2:00 - 4:00 PM' : 'No active orders yet.'
+  const getOrderLogisticsNote = (status) => {
+    const normalized = (status || '').toLowerCase()
 
-  const trackingStatus = latestOrder?.status || null
+    if (normalized === 'pending') return 'Order received and being prepared.'
+    if (normalized === 'packed') return 'Items are packed and ready for dispatch.'
+    if (normalized === 'out for delivery') return 'Rider is on the way.'
+    if (normalized === 'delivered') return 'Parcel has been delivered.'
+    if (normalized === 'cancelled') return 'Order was cancelled.'
 
-  const computedTrackingSteps = trackingSteps.map((step, index) => {
-    let status = 'pending'
+    return 'Order status update in progress.'
+  }
 
-    if (!trackingStatus) {
-      status = 'pending'
-    } else if (trackingStatus === 'Pending') {
-      status = index === 0 ? 'active' : 'pending'
-    } else if (trackingStatus === 'Packed') {
-      status = index === 0 ? 'done' : index === 1 ? 'active' : 'pending'
-    } else if (trackingStatus === 'Out for delivery') {
-      status = index <= 1 ? 'done' : index === 2 ? 'active' : 'pending'
-    } else if (trackingStatus === 'Delivered') {
-      status = index <= 2 ? 'done' : 'done'
-    } else if (trackingStatus === 'Cancelled') {
-      status = 'pending'
-    } else {
-      status = step.status || 'pending'
+  const handleCancelOrder = async (orderId) => {
+    if (!orderId || cancellingId) return
+
+    setCancellingId(orderId)
+    try {
+      const { data: userResult } = await supabase.auth.getUser()
+      const supabaseUser = userResult?.user
+      const userIdentifier = supabaseUser?.id || userId
+      if (!userIdentifier) {
+        setError('Please sign in to cancel orders.')
+        return
+      }
+
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ status: 'Cancelled' })
+        .eq('id', orderId)
+        .eq('user_id', userIdentifier)
+
+      if (updateError) {
+        console.error('Error cancelling order', updateError)
+        setError('Failed to cancel order. Please try again.')
+        return
+      }
+
+      setOrders((prev) => {
+        const next = prev.map((o) => (o.id === orderId ? { ...o, status: 'Cancelled' } : o))
+        persistLocalOrders(next)
+        return next
+      })
+      setError(null)
+    } catch (err) {
+      console.error('Unexpected error cancelling order', err)
+      setError('Failed to cancel order. Please try again.')
+    } finally {
+      setCancellingId(null)
     }
+  }
 
-    return { ...step, status }
-  })
+  const renderOrdersContent = () => {
+    if (isLoading) return <p className="orders-empty">Loading your orders...</p>
+    if (error) return <p className="orders-empty">{error}</p>
+    if (!orders.length) return <p className="orders-empty">You haven't placed any orders yet.</p>
 
-  return (
-    <main className="customer-module">
-      <header className="hero">
-        <p className="eyebrow">Orders & tracking</p>
-        <h1>Keep customers informed</h1>
-        <p className="intro">
-          After checkout, buyers receive confirmations, can monitor courier progress, and manage their
-          profile for the next purchase.
-        </p>
-      </header>
-
-      <section className="order-section">
-        <article className="order-card">
-          <div className="order-card__header">
-            <div>
-              <p>Order number</p>
-              <strong>{orderNumber}</strong>
-            </div>
-            <span className="badge">{latestOrder ? latestOrder.status || 'Paid' : 'No orders'}</span>
-          </div>
-          <div className="order-card__grid">
-            <div>
-              <h4>Delivery Address</h4>
-              {profileAddress ? (
-                <>
-                  <p>{profileAddress.name}</p>
-                  {profileAddress.address && <p>{profileAddress.address}</p>}
-                  {profileAddress.phone && <p>Contact: {profileAddress.phone}</p>}
-                </>
-              ) : (
-                <p>Please set your default delivery address in your Profile.</p>
-              )}
-            </div>
-            <div>
-              <h4>Payment</h4>
-              <p>Cash on Delivery</p>
-              <p>₱{paymentAmount}</p>
-            </div>
-            <div>
-              <h4>ETA</h4>
-              <p>{eta}</p>
-              <small>Tracking link shared via SMS</small>
-            </div>
-          </div>
-        </article>
-
-        <article className="order-tracking">
-          <h3>Track order</h3>
-          <div className="timeline">
-            {computedTrackingSteps.map((step) => (
-              <div className={`timeline-step ${step.status}`} key={step.title}>
-                <div className="timeline-dot" />
+    return (
+      <div className="orders-grid">
+        {orders.map((order) => {
+          const totalAmount = formatCurrency(order.total_amount)
+          const createdDate = formatDate(order.created_at)
+          const statusLabel = order.status || 'Pending'
+          return (
+            <article className="order-summary-card" key={order.id}>
+              <div className="order-summary__header">
                 <div>
-                  <strong>{step.title}</strong>
-                  <p>{step.detail}</p>
-                  {step.time && <small>{step.time}</small>}
+                  <p className="order-number">{order.order_number || order.id}</p>
+                  {createdDate && <small>{createdDate}</small>}
+                </div>
+                <span className="status-pill">{statusLabel}</span>
+              </div>
+              <div className="order-summary__meta">
+                <div className="meta-block">
+                  <p className="meta-label">Total Payment</p>
+                  <strong>₱{totalAmount}</strong>
+                </div>
+                <div className="meta-block">
+                  <p className="meta-label">Logistics</p>
+                  <small>{getOrderLogisticsNote(order.status)}</small>
                 </div>
               </div>
-            ))}
-          </div>
-        </article>
+              {['Pending', 'Packed', 'pending', 'packed'].includes(order.status || '') && (
+                <div className="order-actions-row">
+                  <button
+                    type="button"
+                    className="order-action-button cancel"
+                    onClick={() => handleCancelOrder(order.id)}
+                    disabled={cancellingId === order.id}
+                  >
+                    {cancellingId === order.id ? 'Cancelling...' : 'Cancel Order'}
+                  </button>
+                </div>
+              )}
+            </article>
+          )
+        })}
+      </div>
+    )
+  }
 
-        <article className="profile-card">
-          <h3>Profile management</h3>
-          <p>
-            A dedicated profile area empowers customers to keep their data accurate and reorder in a
-            click.
-          </p>
-          <ul>
-            {profileActions.map((action) => (
-              <li key={action}>{action}</li>
-            ))}
-          </ul>
-        </article>
-      </section>
+  return (
+    <main className="profile-page modern-profile">
+      <div className="orders-page-shell">
+        <section className="profile-card">
+          <div className="card-header">
+            <h1>My Orders</h1>
+            <p>Track your order history and current orders</p>
+          </div>
+          <div className="card-body orders-body">{renderOrdersContent()}</div>
+        </section>
+      </div>
     </main>
   )
 }

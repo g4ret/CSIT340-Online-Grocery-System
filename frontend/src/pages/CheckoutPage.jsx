@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
-function CheckoutPage({ showToast, onNavigate, onOrderPlaced, checkoutItems = [] }) {
+function CheckoutPage({
+  showToast,
+  onNavigate,
+  onOrderPlaced,
+  checkoutItems = [],
+  userId,
+  userEmail,
+}) {
   const [profileAddress, setProfileAddress] = useState(null)
   const [isLoadingProfile, setIsLoadingProfile] = useState(false)
 
@@ -65,18 +72,30 @@ function CheckoutPage({ showToast, onNavigate, onOrderPlaced, checkoutItems = []
       return
     }
 
-    try {
-      const { data: userResult, error: userError } = await supabase.auth.getUser()
+    const persistLocalOrder = (order) => {
+      try {
+        const existing = JSON.parse(localStorage.getItem('ordersLocal') || '[]')
+        const next = Array.isArray(existing) ? existing : []
+        next.unshift(order)
+        localStorage.setItem('ordersLocal', JSON.stringify(next.slice(0, 50)))
+      } catch (err) {
+        console.error('Error saving local order cache', err)
+      }
+    }
 
-      if (userError || !userResult?.user) {
-        console.error('Error getting Supabase user', userError)
+    try {
+      const { data: userResult } = await supabase.auth.getUser()
+      const supabaseUser = userResult?.user
+      const userRef = supabaseUser || (userId ? { id: userId, email: userEmail || '' } : null)
+
+      if (!userRef) {
         if (showToast) {
           showToast('You must be signed in to place an order.', 'error')
         }
         return
       }
 
-      const user = userResult.user
+      const user = userRef
       const totalItems = checkoutItems.reduce((sum, item) => sum + item.quantity, 0)
       const totalAmount = subtotal + shippingFee
 
@@ -103,6 +122,15 @@ function CheckoutPage({ showToast, onNavigate, onOrderPlaced, checkoutItems = []
         }
         return
       }
+
+      persistLocalOrder({
+        id: orderInsert.id,
+        user_id: userRef.id,
+        order_number: orderInsert.order_number,
+        status: orderInsert.status,
+        total_amount: orderInsert.total_amount,
+        created_at: orderInsert.created_at || new Date().toISOString(),
+      })
 
       const orderItemsPayload = checkoutItems.map((item) => {
         const unitPrice = item.product?.price || 0

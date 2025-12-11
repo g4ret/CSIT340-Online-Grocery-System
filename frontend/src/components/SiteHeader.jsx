@@ -3,7 +3,6 @@ import { useState } from 'react'
 const customerNavLinks = [
   { id: 'category', label: 'Category' },
   { id: 'home', label: 'Home' },
-  { id: 'orders', label: 'Orders' },
   { id: 'contact', label: 'Contact' },
   { id: 'about', label: 'About' },
 ]

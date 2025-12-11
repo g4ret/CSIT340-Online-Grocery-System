@@ -9,37 +9,10 @@ function AddToCartPage({
   onRemoveCartItems,
 }) {
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0)
-
-  const [selectedIds, setSelectedIds] = useState(cartItems.map((item) => item.productId))
-
-  useEffect(() => {
-    setSelectedIds((previous) => {
-      const validIds = new Set(cartItems.map((item) => item.productId))
-      const next = previous.filter((id) => validIds.has(id))
-      if (next.length === 0 && cartItems.length > 0) {
-        return cartItems.map((item) => item.productId)
-      }
-      return next
-    })
-  }, [cartItems])
-
-  const isAllSelected = cartItems.length > 0 && selectedIds.length === cartItems.length
-
-  const toggleItemSelection = (productId) => {
-    setSelectedIds((previous) =>
-      previous.includes(productId)
-        ? previous.filter((id) => id !== productId)
-        : [...previous, productId]
-    )
-  }
-
-  const handleToggleAll = () => {
-    if (isAllSelected) {
-      setSelectedIds([])
-    } else {
-      setSelectedIds(cartItems.map((item) => item.productId))
-    }
-  }
+  const subtotal = cartItems.reduce(
+    (sum, item) => sum + (item.product?.price || 0) * item.quantity,
+    0
+  )
 
   const handleQuantityChange = (productId, delta) => {
     if (onUpdateCartQuantity) {
@@ -56,103 +29,10 @@ function AddToCartPage({
     }
   }
 
-  const handleBulkDelete = () => {
-    if (!selectedIds.length) {
-      if (showToast) {
-        showToast('Select items to delete first.', 'info')
-      }
-      return
-    }
-
-    if (onRemoveCartItems) {
-      onRemoveCartItems(selectedIds)
-    }
-    if (showToast) {
-      showToast('Selected items removed from cart.', 'success')
-    }
-  }
-
-  const handleBulkMoveToLikes = async () => {
-    if (!selectedIds.length) {
-      if (showToast) {
-        showToast('Select items to move first.', 'info')
-      }
-      return
-    }
-    try {
-      const { data: userResult, error: userError } = await supabase.auth.getUser()
-
-      if (userError || !userResult?.user) {
-        if (showToast) {
-          showToast('Sign in to use your wishlist.', 'info')
-        }
-        return
-      }
-
-      const user = userResult.user
-      const productsToMove = cartItems.filter((item) => selectedIds.includes(item.productId))
-
-      if (!productsToMove.length) {
-        if (showToast) {
-          showToast('Selected items are no longer in your cart.', 'info')
-        }
-        return
-      }
-
-      const payload = productsToMove.map((entry) => ({
-        user_id: user.id,
-        product_id: entry.productId,
-      }))
-
-      const { error } = await supabase
-        .from('wishlists')
-        .upsert(payload, { onConflict: 'user_id,product_id' })
-
-      if (error) {
-        console.error('Error moving items to wishlist', error)
-        if (showToast) {
-          showToast('Failed to move items to wishlist. Please try again.', 'error')
-        }
-        return
-      }
-
-      if (onRemoveCartItems) {
-        onRemoveCartItems(selectedIds)
-      }
-      if (showToast) {
-        showToast('Selected items moved to wishlist.', 'success')
-      }
-    } catch (err) {
-      console.error('Unexpected error moving items to wishlist', err)
-      if (showToast) {
-        showToast('Failed to move items to wishlist. Please try again.', 'error')
-      }
-    }
-  }
-
-  const handleBulkRemoveInactive = () => {
-    if (showToast) {
-      showToast('No inactive products to remove (demo only).', 'info')
-    }
-  }
-
-  const handleFindSimilar = () => {
-    if (showToast) {
-      showToast('Find similar will be connected to recommendations (demo).', 'info')
-    }
-  }
-
-  const selectedItems = cartItems.filter((item) => selectedIds.includes(item.productId))
-  const selectedTotalItems = selectedItems.reduce((sum, item) => sum + item.quantity, 0)
-  const selectedTotalPrice = selectedItems.reduce(
-    (sum, item) => sum + (item.product?.price || 0) * item.quantity,
-    0
-  )
-
   const handleCheckout = () => {
-    if (!selectedIds.length) {
+    if (!cartItems.length) {
       if (showToast) {
-        showToast('Select items to check out first.', 'info')
+        showToast('Your cart is empty.', 'info')
       }
       return
     }
@@ -161,129 +41,87 @@ function AddToCartPage({
       showToast('Review your order details on the checkout page.', 'info')
     }
     if (onCheckout) {
-      onCheckout(selectedIds)
+      onCheckout(cartItems.map((item) => item.productId))
     }
   }
 
   return (
-    <main className="customer-module cart-page">
+    <main className="cart-layout">
+      <div className="cart-breadcrumb">
+        <span>Home</span> <span className="crumb-divider">/</span> <span>Cart</span>
+      </div>
 
-      <section className="cart-section">
-        <div className="cart-head">
-          <div>Product</div>
-          <div>Unit price</div>
-          <div>Quantity</div>
-          <div>Total Price</div>
-          <div>Actions</div>
-        </div>
+      <div className="cart-shell">
+        <section className="cart-card table-card">
+          <header className="cart-card__head">
+            <div>Product</div>
+            <div>Price</div>
+            <div>Quantity</div>
+            <div>Subtotal</div>
+          </header>
 
-        {cartItems.length === 0 && (
-          <p className="empty-cart">Your cart is empty.</p>
-        )}
+          <div className="cart-table-body">
+            {cartItems.length === 0 && <p className="empty-cart">Your cart is empty.</p>}
 
-        {cartItems.length > 0 && (
-          <article className="merchant-block" key="cart-merchant">
-            <div className="merchant-title">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={isAllSelected}
-                  onChange={handleToggleAll}
-                />{' '}
-                LazShoppe
-              </label>
-            </div>
             {cartItems.map((entry) => {
               const product = entry.product
-
-              if (!product) {
-                return null
-              }
+              if (!product) return null
+              const lineTotal = (product.price || 0) * entry.quantity
 
               return (
-                <div className="cart-row" key={entry.productId}>
-                  <label className="product-cell">
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(entry.productId)}
-                      onChange={() => toggleItemSelection(entry.productId)}
-                    />
+                <div className="cart-row-simple" key={entry.productId}>
+                  <div className="cart-product-cell">
                     <img src={product.image} alt={product.name} />
                     <div>
-                      <p>{product.name}</p>
-                      <small>Qty: {entry.quantity}</small>
+                      <p className="product-name">{product.name}</p>
+                      <button
+                        type="button"
+                        className="link-btn"
+                        onClick={() => handleRowDelete(entry.productId)}
+                      >
+                        Remove
+                      </button>
                     </div>
-                  </label>
-                  <strong>₱{product.price}</strong>
-                  <div className="qty-pill">
-                    <button
-                      type="button"
-                      onClick={() => handleQuantityChange(entry.productId, -1)}
-                    >
+                  </div>
+                  <div className="cart-price">₱{product.price || 0}</div>
+                  <div className="cart-qty">
+                    <button type="button" onClick={() => handleQuantityChange(entry.productId, -1)}>
                       -
                     </button>
                     <span>{entry.quantity}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleQuantityChange(entry.productId, 1)}
-                    >
+                    <button type="button" onClick={() => handleQuantityChange(entry.productId, 1)}>
                       +
                     </button>
                   </div>
-                  <strong>₱{product.price * entry.quantity}</strong>
-                  <div className="actions">
-                    <button
-                      type="button"
-                      className="link-btn"
-                      onClick={() => handleRowDelete(entry.productId)}
-                    >
-                      Delete
-                    </button>
-                    <button
-                      type="button"
-                      className="link-btn subtle"
-                      onClick={handleFindSimilar}
-                    >
-                      Find similar
-                    </button>
-                  </div>
+                  <div className="cart-line">₱{lineTotal}</div>
                 </div>
               )
             })}
-          </article>
-        )}
-      </section>
-
-      <footer className="cart-footer">
-        <div className="bulk-actions">
-          <label>
-            <input
-              type="checkbox"
-              checked={isAllSelected}
-              onChange={handleToggleAll}
-            />{' '}
-            Select all ({totalItems})
-          </label>
-          <button type="button" onClick={handleBulkDelete}>
-            Delete
-          </button>
-          <button type="button" onClick={handleBulkRemoveInactive}>
-            Remove inactive products
-          </button>
-          <button type="button" onClick={handleBulkMoveToLikes}>
-            Move to likes
-          </button>
-        </div>
-        <div className="checkout-summary">
-          <div>
-            Total ({selectedTotalItems} item
-            {selectedTotalItems > 1 ? 's' : ''}): <strong>₱{selectedTotalPrice}</strong>
           </div>
-          <button type="button" className="checkout-btn" onClick={handleCheckout}>
-            Check Out
+        </section>
+
+        <aside className="cart-card summary-card">
+          <header>
+            <h3>Cart Total</h3>
+          </header>
+          <div className="summary-row">
+            <span>Subtotal:</span>
+            <strong>₱{subtotal}</strong>
+          </div>
+          <div className="summary-row total">
+            <span>Total:</span>
+            <strong>₱{subtotal}</strong>
+          </div>
+          <button
+            type="button"
+            className="checkout-btn wide"
+            onClick={handleCheckout}
+            disabled={!cartItems.length}
+          >
+            Process to checkout
           </button>
-        </div>
-      </footer>
+        </aside>
+      </div>
     </main>
   )
 }

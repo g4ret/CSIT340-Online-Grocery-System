@@ -25,7 +25,6 @@ const pages = {
   product: { label: 'Product Details', component: ProductDetailsPage },
   addToCart: { label: 'Add to Cart', component: AddToCartPage },
   checkout: { label: 'Checkout', component: CheckoutPage },
-  orders: { label: 'Orders & Tracking', component: OrdersPage },
   profile: { label: 'Profile', component: ProfilePage },
   login: { label: 'Login', component: LoginPage },
   register: { label: 'Register', component: RegisterPage },
@@ -48,11 +47,14 @@ const ADMIN_CREDENTIALS = {
   password: 'admin123',
 }
 
+const DEMO_USER_ID = 'demo-user'
+
 function App() {
   const [activePage, setActivePage] = useState('login')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [userRole, setUserRole] = useState(null)
   const [userId, setUserId] = useState(null)
+  const [userEmail, setUserEmail] = useState(null)
   const [cartItems, setCartItems] = useState([])
   const [toast, setToast] = useState(null)
   const [checkoutItems, setCheckoutItems] = useState([])
@@ -63,11 +65,15 @@ function App() {
     const authStatus = localStorage.getItem('isAuthenticated')
     const savedRole = localStorage.getItem('userRole')
     const savedUserId = localStorage.getItem('userId')
+    const savedUserEmail = localStorage.getItem('userEmail')
     if (authStatus === 'true' && savedRole) {
       setIsAuthenticated(true)
       setUserRole(savedRole)
       if (savedUserId) {
         setUserId(savedUserId)
+      }
+      if (savedUserEmail) {
+        setUserEmail(savedUserEmail)
       }
       setActivePage(savedRole === 'admin' ? 'adminDashboard' : 'home')
     }
@@ -146,6 +152,7 @@ function App() {
     setIsAuthenticated(true)
     setUserRole(role)
     setUserId(newUserId || null)
+    setUserEmail(email)
     localStorage.setItem('isAuthenticated', 'true')
     localStorage.setItem('userRole', role)
     localStorage.setItem('userEmail', email)
@@ -169,7 +176,7 @@ function App() {
 
       if (error || !data.user) {
         if (normalizedEmail === TEMP_CREDENTIALS.email && password === TEMP_CREDENTIALS.password) {
-          const result = persistSession('customer', normalizedEmail, 'home', null)
+          const result = persistSession('customer', normalizedEmail, 'home', DEMO_USER_ID)
           showToast('Welcome back to LazShoppe! (demo login)', 'success')
           return result
         }
@@ -204,6 +211,7 @@ function App() {
     setIsAuthenticated(false)
     setUserRole(null)
     setUserId(null)
+    setUserEmail(null)
     setCartItems([])
     localStorage.removeItem('isAuthenticated')
     localStorage.removeItem('userEmail')
@@ -401,6 +409,9 @@ function App() {
   const sharedProps = {
     onNavigate: handleNavigate,
     userRole,
+    userId,
+    userEmail,
+    isAuthenticated,
     onLogout: handleLogout,
     activePage,
     cartItems,
