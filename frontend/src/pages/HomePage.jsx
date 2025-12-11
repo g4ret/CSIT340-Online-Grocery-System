@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import productsDataset from '../data/products'
 
 const categories = [
   { icon: '🥫', label: 'Pantry Essentials', count: 1 },
@@ -38,6 +39,7 @@ const calculateDiscount = (originalPrice, currentPrice) => {
 function HomePage({ onNavigate, onAddToCart, showToast, onViewProductDetails }) {
   const [products, setProducts] = useState([])
   const [quantities, setQuantities] = useState({})
+  const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -102,7 +104,18 @@ function HomePage({ onNavigate, onAddToCart, showToast, onViewProductDetails }) 
     }
   }
 
-  const topSavers = products.slice(0, 8).map((product) => {
+  const baseProducts = useMemo(() => (products.length ? products : productsDataset), [products])
+
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm.trim()) return baseProducts
+    const q = searchTerm.toLowerCase()
+    return baseProducts.filter((product) => {
+      const haystack = `${product.name} ${product.description || ''} ${product.category || ''}`.toLowerCase()
+      return haystack.includes(q)
+    })
+  }, [baseProducts, searchTerm])
+
+  const topSavers = filteredProducts.slice(0, 8).map((product) => {
     const originalPrice = product.price + Math.floor(product.price * 0.2)
     const discount = calculateDiscount(originalPrice, product.price)
     return { ...product, originalPrice, discount }
@@ -134,6 +147,24 @@ function HomePage({ onNavigate, onAddToCart, showToast, onViewProductDetails }) 
       <section className="home-section">
         <div className="section-top">
           <div>
+            <p className="section-eyebrow">Find what you need</p>
+            <h2>Search products</h2>
+          </div>
+          <div className="search-bar" style={{ width: '100%', maxWidth: 520 }}>
+            <input
+              type="search"
+              placeholder="Search by name, category, or description..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <button type="button" onClick={() => setSearchTerm('')}>
+              Clear
+            </button>
+          </div>
+        </div>
+
+        <div className="section-top">
+          <div>
             <h2>Top Savers Today</h2>
             <span className="discount-badge">20% OFF</span>
           </div>
@@ -142,6 +173,7 @@ function HomePage({ onNavigate, onAddToCart, showToast, onViewProductDetails }) 
           </button>
         </div>
         <div className="card-grid">
+          {topSavers.length === 0 && <p style={{ margin: '0.5rem 0' }}>No products match your search.</p>}
           {topSavers.map((product) => (
             <article className="home-product-card" key={product.id}>
               <span className="discount-pill">{product.discount}%</span>
