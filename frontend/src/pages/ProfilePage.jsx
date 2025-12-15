@@ -30,6 +30,12 @@ function ProfilePage({ showToast, userId, userEmail }) {
   })
   const [isLoadingProfile, setIsLoadingProfile] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [passwordForm, setPasswordForm] = useState({
+    current: '',
+    newPassword: '',
+    confirm: '',
+  })
+  const [isSavingPassword, setIsSavingPassword] = useState(false)
   const [orders, setOrders] = useState([])
   const [isLoadingOrders, setIsLoadingOrders] = useState(false)
   const [ordersError, setOrdersError] = useState(null)
@@ -62,9 +68,15 @@ function ProfilePage({ showToast, userId, userEmail }) {
         }
 
         const activeEmail = supabaseUser?.email || fallbackEmail
+        const storedName = localStorage.getItem('userName') || ''
+        // Prioritize: profiles table > user_metadata > stored name > fallback
         const activeName =
-          profileRow?.full_name || supabaseUser?.user_metadata?.full_name || profileData.name
-        const activePhone = profileRow?.phone || supabaseUser?.user_metadata?.phone || profileData.phone
+          profileRow?.full_name ||
+          supabaseUser?.user_metadata?.full_name ||
+          storedName ||
+          profileData.name
+        const activePhone =
+          profileRow?.phone || supabaseUser?.user_metadata?.phone || profileData.phone
         const activeAddress = profileRow?.address || profileData.address
         const activeUsername = supabaseUser?.user_metadata?.username || profileData.username
         const activeBirthDate = profileRow?.birth_date || profileData.birthDate
@@ -261,6 +273,51 @@ function ProfilePage({ showToast, userId, userEmail }) {
     }
   }
 
+  const handlePasswordFieldChange = (field, value) => {
+    setPasswordForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const handleSavePassword = async () => {
+    if (isSavingPassword) return
+    if (!passwordForm.newPassword || passwordForm.newPassword.length < 6) {
+      showToast?.('New password must be at least 6 characters.', 'error')
+      return
+    }
+    if (passwordForm.newPassword !== passwordForm.confirm) {
+      showToast?.('New password and confirmation do not match.', 'error')
+      return
+    }
+
+    setIsSavingPassword(true)
+    try {
+      const { data: userResult } = await supabase.auth.getUser()
+      const supabaseUser = userResult?.user
+
+      if (!supabaseUser) {
+        showToast?.('Please sign in to update your password.', 'error')
+        setIsSavingPassword(false)
+        return
+      }
+
+      const { error } = await supabase.auth.updateUser({
+        password: passwordForm.newPassword,
+      })
+
+      if (error) {
+        console.error('Error updating password', error)
+        showToast?.(error.message || 'Failed to update password.', 'error')
+      } else {
+        showToast?.('Password updated. Use the new password next time you sign in.', 'success')
+        setPasswordForm({ current: '', newPassword: '', confirm: '' })
+      }
+    } catch (err) {
+      console.error('Unexpected error updating password', err)
+      showToast?.('Failed to update password. Please try again.', 'error')
+    } finally {
+      setIsSavingPassword(false)
+    }
+  }
+
   const renderProfileDetails = () => (
     <section className="profile-card">
       <div className="card-header">
@@ -286,14 +343,32 @@ function ProfilePage({ showToast, userId, userEmail }) {
 
         <div className="form-row-group">
           <label>Password Changes</label>
-          <input type="password" placeholder="Current Password" disabled />
-          <input type="password" placeholder="New Password" disabled />
-          <input type="password" placeholder="Confirm New Password" disabled />
+          <input
+            type="password"
+            placeholder="Current Password (optional)"
+            value={passwordForm.current}
+            onChange={(e) => handlePasswordFieldChange('current', e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="New Password"
+            value={passwordForm.newPassword}
+            onChange={(e) => handlePasswordFieldChange('newPassword', e.target.value)}
+          />
+          <input
+            type="password"
+            placeholder="Confirm New Password"
+            value={passwordForm.confirm}
+            onChange={(e) => handlePasswordFieldChange('confirm', e.target.value)}
+          />
         </div>
 
         <div className="card-actions">
           <button type="button" onClick={handleSaveProfile} disabled={isSaving}>
             Edit Profile
+          </button>
+          <button type="button" onClick={handleSavePassword} disabled={isSavingPassword}>
+            Update Password
           </button>
         </div>
       </form>

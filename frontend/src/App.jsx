@@ -177,6 +177,7 @@ function App() {
       if (error || !data.user) {
         if (normalizedEmail === TEMP_CREDENTIALS.email && password === TEMP_CREDENTIALS.password) {
           const result = persistSession('customer', normalizedEmail, 'home', DEMO_USER_ID)
+          localStorage.setItem('userName', 'Demo User')
           showToast('Welcome back to LazShoppe! (demo login)', 'success')
           return result
         }
@@ -188,6 +189,26 @@ function App() {
       const isAdminEmail = normalizedEmail === ADMIN_CREDENTIALS.email
       const role = roleFromMetadata === 'admin' || isAdminEmail ? 'admin' : 'customer'
       const destination = role === 'admin' ? 'adminDashboard' : 'home'
+
+      // Store name for profile display
+      let resolvedName = data.user.user_metadata?.full_name || ''
+      if (!resolvedName) {
+        try {
+          const { data: profileRow } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', data.user.id)
+            .maybeSingle()
+          if (profileRow?.full_name) {
+            resolvedName = profileRow.full_name
+          }
+        } catch (nameErr) {
+          console.error('Error fetching profile name after login', nameErr)
+        }
+      }
+      if (resolvedName) {
+        localStorage.setItem('userName', resolvedName)
+      }
 
       const result = persistSession(role, normalizedEmail, destination, data.user.id)
       showToast(
@@ -386,6 +407,29 @@ function App() {
       }
 
       const newUserId = data?.user?.id || null
+
+      // Create profile entry with registered name and phone
+      if (newUserId) {
+        try {
+          await supabase.from('profiles').upsert(
+            {
+              id: newUserId,
+              full_name: userData.name,
+              phone: userData.phone || '',
+            },
+            { onConflict: 'id' }
+          )
+        } catch (profileError) {
+          console.error('Error creating profile during registration', profileError)
+          // Continue even if profile creation fails - user_metadata still has the data
+        }
+      }
+
+      // Persist registered name locally for UI fallback
+      if (userData.name) {
+        localStorage.setItem('userName', userData.name)
+      }
+
       const result = persistSession('customer', normalizedEmail, 'home', newUserId)
       showToast('Account created successfully. You are now signed in.', 'success')
       return result

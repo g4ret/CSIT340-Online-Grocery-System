@@ -3598,6 +3598,7 @@
   border-radius: 4px;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-top: auto;
 }
 
 .related-card__cta:hover {
